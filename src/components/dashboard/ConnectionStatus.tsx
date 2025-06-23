@@ -1,0 +1,15 @@
+interface ConnectionStatusProps {
+  isConnected: boolean;
+}
+
+export function ConnectionStatus({ isConnected }: ConnectionStatusProps) {
+  return (
+    <div
+      className={`px-3 py-1 rounded-full text-sm ${
+        isConnected ? "bg-green-600" : "bg-red-600"
+      }`}
+    >
+      {isConnected ? "Connected" : "Disconnected"}
+    </div>
+  );
+}
