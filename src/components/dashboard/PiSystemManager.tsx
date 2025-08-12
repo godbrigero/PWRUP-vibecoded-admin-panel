@@ -1,3 +1,4 @@
+// src/components/dashboard/PiSystemManager.tsx - Purpose: CRUD list for Pi systems
 import { useState } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { PiSystemData } from "@/lib/hooks/useMultiPiDashboard";
@@ -23,9 +24,7 @@ export function PiSystemManager({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleAddPi();
-    }
+    if (e.key === "Enter") handleAddPi();
   };
 
   const getStatusColor = (piData: PiSystemData) => {
@@ -48,8 +47,6 @@ export function PiSystemManager({
   return (
     <Card>
       <CardHeader>Pi Systems Manager</CardHeader>
-
-      {/* Add new Pi */}
       <div className="mb-4">
         <div className="flex gap-2">
           <input
@@ -74,7 +71,6 @@ export function PiSystemManager({
         </div>
       </div>
 
-      {/* Pi Systems List */}
       {piSystems.size === 0 ? (
         <div className="text-gray-400 text-center py-4">
           No Pi systems added yet. Add one above to get started.

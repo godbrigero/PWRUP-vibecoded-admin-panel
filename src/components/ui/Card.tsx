@@ -1,3 +1,4 @@
+// src/components/ui/Card.tsx - Purpose: simple container primitives
 import { ReactNode } from "react";
 
 interface CardProps {

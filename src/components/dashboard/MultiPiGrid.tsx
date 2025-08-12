@@ -1,4 +1,5 @@
-import { useState } from "react";
+// src/components/dashboard/MultiPiGrid.tsx - Purpose: expandable grid of Pi systems with charts and logs
+import { useMemo, useState } from "react";
 import { PiSystemData } from "@/lib/hooks/useMultiPiDashboard";
 import { Card, CardHeader } from "@/components/ui/Card";
 import {
@@ -8,6 +9,7 @@ import {
   ProcessChart,
   NetworkChart,
 } from "@/components/ui";
+import { Terminal } from "./Terminal";
 import { formatPercentage, formatBytes } from "@/lib/utils/formatters";
 
 interface MultiPiGridProps {
@@ -17,8 +19,9 @@ interface MultiPiGridProps {
 
 export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
   const [expandedPi, setExpandedPi] = useState<string | null>(null);
-  const activeSystems = Array.from(piSystems.values()).filter(
-    (pi) => pi.status
+  const activeSystems = useMemo(
+    () => Array.from(piSystems.values()).filter((pi) => pi.status),
+    [piSystems]
   );
 
   if (activeSystems.length === 0) {
@@ -43,7 +46,6 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
 
         return (
           <Card key={piData.name} className="overflow-hidden">
-            {/* Header - Always Visible */}
             <div
               className="cursor-pointer hover:bg-gray-700/50 transition-colors duration-200 -m-6 p-6"
               onClick={() => handlePiClick(piData.name)}
@@ -82,7 +84,6 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
               </div>
             </div>
 
-            {/* Expanded Content */}
             <div
               className={`transition-all duration-300 ease-in-out ${
                 isExpanded
@@ -91,9 +92,7 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
               }`}
             >
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                {/* Left Column - Charts */}
                 <div className="space-y-6">
-                  {/* System Overview Pie Chart */}
                   <div>
                     <h3 className="text-lg font-semibold text-blue-400 mb-4">
                       System Usage Overview
@@ -105,7 +104,6 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
                     />
                   </div>
 
-                  {/* CPU Cores Bar Chart */}
                   <div>
                     <h3 className="text-lg font-semibold text-purple-400 mb-4">
                       CPU Cores Usage
@@ -122,7 +120,6 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
                     )}
                   </div>
 
-                  {/* Network Activity Chart */}
                   <div>
                     <h3 className="text-lg font-semibold text-green-400 mb-4">
                       Network Activity
@@ -152,15 +149,12 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
                   </div>
                 </div>
 
-                {/* Right Column - Details & Processes */}
                 <div className="space-y-6">
-                  {/* Detailed Stats */}
                   <div>
                     <h3 className="text-lg font-semibold text-orange-400 mb-4">
                       Detailed Statistics
                     </h3>
                     <div className="space-y-4">
-                      {/* CPU Details */}
                       <div className="bg-gray-700 p-4 rounded">
                         <h4 className="text-sm font-medium text-blue-400 mb-3">
                           CPU Information
@@ -203,7 +197,6 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
                         </div>
                       </div>
 
-                      {/* Memory & Disk Details */}
                       <div className="bg-gray-700 p-4 rounded">
                         <h4 className="text-sm font-medium text-green-400 mb-3">
                           Storage Information
@@ -237,7 +230,6 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
                     </div>
                   </div>
 
-                  {/* Top Processes Chart */}
                   <div>
                     <h3 className="text-lg font-semibold text-red-400 mb-4">
                       Top Processes
@@ -254,55 +246,15 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
                     )}
                   </div>
 
-                  {/* Terminal */}
                   <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-green-400">
-                        Terminal Output
-                      </h3>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onClearLogs(piData.name);
-                        }}
-                        className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-gray-700 transition-colors"
-                      >
-                        Clear Logs
-                      </button>
-                    </div>
-                    <div className="bg-black rounded-lg p-4 h-64 flex flex-col">
-                      <div className="flex-1 overflow-y-auto space-y-1 text-xs font-mono">
-                        {piData.logs.length === 0 ? (
-                          <div className="text-gray-500 text-center py-8">
-                            No logs yet...
-                          </div>
-                        ) : (
-                          piData.logs.slice(-15).map((log, index) => (
-                            <div key={index} className="flex">
-                              {log.prefix && (
-                                <span
-                                  className="mr-2 flex-shrink-0"
-                                  style={{ color: log.color || "#60A5FA" }}
-                                >
-                                  [{log.prefix}]
-                                </span>
-                              )}
-                              <span
-                                className="break-words"
-                                style={{ color: log.color || "#FFFFFF" }}
-                              >
-                                {log.message}
-                              </span>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
+                    <Terminal
+                      messages={piData.logs.slice(-100)}
+                      onClear={() => onClearLogs(piData.name)}
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* System Info Footer */}
               <div className="mt-6 pt-4 border-t border-gray-700">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>

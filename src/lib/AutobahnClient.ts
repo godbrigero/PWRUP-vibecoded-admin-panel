@@ -1,3 +1,4 @@
+// src/lib/AutobahnClient.ts - Purpose: minimal pub/sub websocket client using protobuf frames
 import {
   MessageType,
   PublishMessage,

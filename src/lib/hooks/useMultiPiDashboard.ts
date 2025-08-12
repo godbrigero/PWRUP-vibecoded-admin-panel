@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+// src/lib/hooks/useMultiPiDashboard.ts - Purpose: manage multiple Pi subscriptions and aggregate stats
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { AutobahnClient, Address } from "@/lib/AutobahnClient";
 import {
   PiStatus,
@@ -147,27 +148,22 @@ export function useMultiPiDashboard() {
     });
   }, []);
 
-  const globalStats: GlobalStats = useCallback(() => {
+  const globalStats: GlobalStats = useMemo(() => {
     const systems = Array.from(piSystems.values());
     const activeSystems = systems.filter((s) => s.status && s.isConnected);
+
+    const average = (arr: number[]) =>
+      arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 
     return {
       totalPis: systems.length,
       activePis: activeSystems.length,
-      avgCpuUsage:
-        activeSystems.length > 0
-          ? activeSystems.reduce(
-              (sum, s) => sum + (s.status?.cpuUsageTotal || 0),
-              0
-            ) / activeSystems.length
-          : 0,
-      avgMemoryUsage:
-        activeSystems.length > 0
-          ? activeSystems.reduce(
-              (sum, s) => sum + (s.status?.memoryUsage || 0),
-              0
-            ) / activeSystems.length
-          : 0,
+      avgCpuUsage: average(
+        activeSystems.map((s) => s.status?.cpuUsageTotal || 0)
+      ),
+      avgMemoryUsage: average(
+        activeSystems.map((s) => s.status?.memoryUsage || 0)
+      ),
       totalNetworkIn: activeSystems.reduce(
         (sum, s) => sum + (s.status?.netUsageIn || 0),
         0
@@ -177,7 +173,7 @@ export function useMultiPiDashboard() {
         0
       ),
     };
-  }, [piSystems])();
+  }, [piSystems]);
 
   return {
     piSystems,

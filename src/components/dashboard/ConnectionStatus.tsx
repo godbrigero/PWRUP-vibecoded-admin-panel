@@ -1,3 +1,4 @@
+// src/components/dashboard/ConnectionStatus.tsx - Purpose: pill indicator for connection state
 interface ConnectionStatusProps {
   isConnected: boolean;
 }

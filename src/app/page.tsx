@@ -1,10 +1,10 @@
+// src/app/page.tsx - Purpose: landing page linking to dashboard
 import Image from "next/image";
 import Link from "next/link";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -35,9 +35,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             Welcome to Admin Dashboard
@@ -48,7 +46,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
@@ -135,7 +132,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Action Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Link
             href="/dashboard"

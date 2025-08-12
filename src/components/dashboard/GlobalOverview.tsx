@@ -1,3 +1,4 @@
+// src/components/dashboard/GlobalOverview.tsx - Purpose: summarize global stats succinctly
 import { GlobalStats } from "@/lib/hooks/useMultiPiDashboard";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -12,7 +13,6 @@ export function GlobalOverview({ stats }: GlobalOverviewProps) {
     <Card>
       <CardHeader>Global Overview</CardHeader>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Pi Count */}
         <div className="text-center">
           <div className="text-2xl font-bold text-blue-400">
             {stats.activePis}/{stats.totalPis}
@@ -20,7 +20,6 @@ export function GlobalOverview({ stats }: GlobalOverviewProps) {
           <div className="text-sm text-gray-400">Active Pis</div>
         </div>
 
-        {/* Average CPU */}
         <div>
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm">Avg CPU</span>
@@ -31,7 +30,6 @@ export function GlobalOverview({ stats }: GlobalOverviewProps) {
           <ProgressBar value={stats.avgCpuUsage} color="blue" />
         </div>
 
-        {/* Average Memory */}
         <div>
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm">Avg Memory</span>
@@ -42,7 +40,6 @@ export function GlobalOverview({ stats }: GlobalOverviewProps) {
           <ProgressBar value={stats.avgMemoryUsage} color="green" />
         </div>
 
-        {/* Total Network */}
         <div>
           <div className="text-xs text-gray-400 mb-1">Total Network</div>
           <div className="text-xs">

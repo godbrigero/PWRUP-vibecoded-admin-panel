@@ -1,3 +1,4 @@
+// src/lib/hooks/useDashboardData.ts - Purpose: single-Pi dashboard data stream
 import { useState, useCallback, useEffect } from "react";
 import { useSubscription } from "@/lib/useSubscription";
 import { AutobahnClient, Address } from "@/lib/AutobahnClient";

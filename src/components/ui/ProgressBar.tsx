@@ -1,3 +1,5 @@
+// src/components/ui/ProgressBar.tsx - Purpose: compact percentage progress bar (expects 0-100)
+
 interface ProgressBarProps {
   value: number;
   className?: string;
@@ -14,10 +16,9 @@ export function ProgressBar({
     green: "bg-green-500",
     yellow: "bg-yellow-500",
     red: "bg-red-500",
-  };
+  } as const;
 
-  const percentage = value > 1 ? value : value * 100;
-  const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
+  const clampedPercentage = Math.min(Math.max(value, 0), 100);
 
   return (
     <div className={`w-full bg-gray-700 rounded-full h-2 ${className}`}>

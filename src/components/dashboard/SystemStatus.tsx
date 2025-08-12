@@ -1,3 +1,4 @@
+// src/components/dashboard/SystemStatus.tsx - Purpose: detailed single-Pi metrics view
 import { PiStatus } from "@/generated/status/PiStatus";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -23,14 +24,12 @@ export function SystemStatus({ piStats }: SystemStatusProps) {
     <Card>
       <CardHeader>System Status</CardHeader>
       <div className="space-y-4">
-        {/* Pi Name */}
         <div>
           <h3 className="text-lg font-medium text-blue-400">
             {piStats.piName || "Unknown Pi"}
           </h3>
         </div>
 
-        {/* CPU Usage */}
         <div>
           <h4 className="text-sm font-medium text-gray-300 mb-2">CPU Usage</h4>
           <div className="space-y-2">
@@ -52,7 +51,6 @@ export function SystemStatus({ piStats }: SystemStatusProps) {
           </div>
         </div>
 
-        {/* Memory Usage */}
         <div>
           <h4 className="text-sm font-medium text-gray-300 mb-2">
             Memory Usage
@@ -66,7 +64,6 @@ export function SystemStatus({ piStats }: SystemStatusProps) {
           <ProgressBar value={piStats.memoryUsage} color="green" />
         </div>
 
-        {/* Disk Usage */}
         <div>
           <h4 className="text-sm font-medium text-gray-300 mb-2">Disk Usage</h4>
           <div className="flex items-center justify-between mb-1">
@@ -78,7 +75,6 @@ export function SystemStatus({ piStats }: SystemStatusProps) {
           <ProgressBar value={piStats.diskUsage} color="yellow" />
         </div>
 
-        {/* Network Usage */}
         <div>
           <h4 className="text-sm font-medium text-gray-300 mb-2">Network</h4>
           <div className="grid grid-cols-2 gap-4">

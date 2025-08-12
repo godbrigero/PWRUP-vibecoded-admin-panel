@@ -1,3 +1,4 @@
+// src/components/ui/Charts.tsx - Purpose: reusable, minimal visualizations for CPU, processes, and network
 import {
   BarChart,
   Bar,
@@ -71,45 +72,51 @@ export function SystemUsagePie({
   disk,
   className = "",
 }: SystemUsagePieProps) {
-  const data = [
-    { name: "CPU", value: Number(cpu.toFixed(1)), fill: "#3b82f6" },
-    { name: "Memory", value: Number(memory.toFixed(1)), fill: "#10b981" },
-    { name: "Disk", value: Number(disk.toFixed(1)), fill: "#f59e0b" },
-    {
-      name: "Free",
-      value: Number((300 - cpu - memory - disk).toFixed(1)),
-      fill: "#6b7280",
-    },
-  ];
+  // Render three minimal donuts instead of one misleading combined pie
+  const items = [
+    { label: "CPU", value: cpu, color: "#3b82f6" },
+    { label: "Memory", value: memory, color: "#10b981" },
+    { label: "Disk", value: disk, color: "#f59e0b" },
+  ].map((x) => ({ ...x, value: Number(x.value.toFixed(1)) }));
 
   return (
-    <div className={`h-48 ${className}`}>
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            innerRadius={30}
-            outerRadius={70}
-            paddingAngle={2}
-            dataKey="value"
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.fill} />
-            ))}
-          </Pie>
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "#1f2937",
-              border: "1px solid #374151",
-              borderRadius: "6px",
-              color: "#f3f4f6",
-            }}
-            formatter={(value) => [`${value}%`, "Usage"]}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+    <div className={`grid grid-cols-3 gap-4 ${className}`}>
+      {items.map((it) => {
+        const data = [
+          { name: it.label, value: it.value, fill: it.color },
+          { name: "Free", value: Math.max(0, 100 - it.value), fill: "#374151" },
+        ];
+        return (
+          <div key={it.label} className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={28}
+                  outerRadius={58}
+                  paddingAngle={1}
+                  dataKey="value"
+                >
+                  {data.map((entry, index) => (
+                    <Cell key={`${it.label}-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1f2937",
+                    border: "1px solid #374151",
+                    borderRadius: "6px",
+                    color: "#f3f4f6",
+                  }}
+                  formatter={(value) => [`${value}%`, it.label]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        );
+      })}
     </div>
   );
 }

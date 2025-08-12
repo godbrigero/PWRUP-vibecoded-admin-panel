@@ -1,3 +1,4 @@
+// src/components/dashboard/ProcessList.tsx - Purpose: compact list of top processes by CPU
 import { PiProcess } from "@/generated/status/PiStatus";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { formatPercentage } from "@/lib/utils/formatters";

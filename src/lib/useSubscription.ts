@@ -1,4 +1,4 @@
-// lib/useSubscription.ts
+// src/lib/useSubscription.ts - Purpose: hook to wire a topic subscription lifecycle
 "use client";
 
 import { useEffect, useRef } from "react";
@@ -29,7 +29,7 @@ export function useSubscription(
     });
 
     return () => {
-      // TODO: Implement unsubscribe when needed
+      client.unsubscribe(topic);
     };
   }, [topic, client]);
 }

@@ -1,9 +1,10 @@
+// src/components/dashboard/Terminal.tsx - Purpose: scrollable log viewer
 import { useRef, useEffect } from "react";
 import { LogMessage } from "@/generated/status/PiStatus";
 
 interface TerminalProps {
   messages: LogMessage[];
-  onClear: () => void;
+  onClear: (e?: unknown) => void;
 }
 
 export function Terminal({ messages, onClear }: TerminalProps) {

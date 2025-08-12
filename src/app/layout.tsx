@@ -1,3 +1,4 @@
+// src/app/layout.tsx - Purpose: root layout and metadata
 import type { Metadata } from "next";
 import "./globals.css";
 
