@@ -1,17 +1,21 @@
 // src/lib/hooks/useDashboardData.ts - Purpose: single-Pi dashboard data stream
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useSubscription } from "@/lib/useSubscription";
-import { AutobahnClient, Address } from "@/lib/AutobahnClient";
 import {
   PiStatus,
   LogMessage,
   StatusType,
   StatusBase,
 } from "@/generated/status/PiStatus";
-
-const client = new AutobahnClient(new Address("10.47.65.7", 8080));
+import { Address, AutobahnClient } from "autobahn-client";
+import { useSettings } from "@/lib/settings";
 
 export function useDashboardData() {
+  const { settings } = useSettings();
+  const client = useMemo(
+    () => new AutobahnClient(new Address(settings.host, settings.port)),
+    [settings.host, settings.port]
+  );
   const [piStats, setPiStats] = useState<PiStatus | null>(null);
   const [logMessages, setLogMessages] = useState<LogMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -22,7 +26,7 @@ export function useDashboardData() {
     return () => {
       setIsConnected(false);
     };
-  }, []);
+  }, [client]);
 
   const handleStatusMessage = useCallback(async (payload: Uint8Array) => {
     try {

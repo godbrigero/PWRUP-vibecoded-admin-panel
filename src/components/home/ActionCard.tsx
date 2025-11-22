@@ -17,7 +17,7 @@ export function ActionCard({
   return (
     <Link
       href={href}
-      className="group bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-200"
+      className="cursor-pointer group bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-200"
     >
       <div className="flex items-center justify-between">
         <div>

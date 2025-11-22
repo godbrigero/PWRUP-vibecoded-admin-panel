@@ -1,14 +1,13 @@
 // src/lib/hooks/useMultiPiDashboard.ts - Purpose: manage multiple Pi subscriptions and aggregate stats
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { AutobahnClient, Address } from "@/lib/AutobahnClient";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { Address, AutobahnClient } from "autobahn-client";
 import {
   PiStatus,
   LogMessage,
   StatusType,
   StatusBase,
 } from "@/generated/status/PiStatus";
-
-const client = new AutobahnClient(new Address("10.47.65.7", 8080));
+import { useSettings } from "@/lib/settings";
 
 export interface PiSystemData {
   name: string;
@@ -28,21 +27,21 @@ export interface GlobalStats {
 }
 
 export function useMultiPiDashboard() {
+  const { settings } = useSettings();
+  const client = useMemo(
+    () => new AutobahnClient(new Address(settings.host, settings.port)),
+    [settings.host, settings.port]
+  );
+  useEffect(() => {
+    client.begin();
+  }, [client]);
   const [piSystems, setPiSystems] = useState<Map<string, PiSystemData>>(
     new Map()
   );
-  const [isConnected, setIsConnected] = useState(false);
+  const isConnected = client.isConnected();
   const subscriptionsRef = useRef<Set<string>>(new Set());
   // Track intentionally removed Pi systems to ignore their messages
   const removedPiSystemsRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    client.begin();
-    setIsConnected(true);
-    return () => {
-      setIsConnected(false);
-    };
-  }, []);
 
   const handleMessage = useCallback((piName: string) => {
     return async (payload: Uint8Array) => {
@@ -118,24 +117,27 @@ export function useMultiPiDashboard() {
       // Subscribe to the Pi's topic
       client.subscribe(topic, handleMessage(piName));
     },
-    [handleMessage]
+    [handleMessage, client]
   );
 
-  const removePiSystem = useCallback((piName: string) => {
-    subscriptionsRef.current.delete(piName);
-    // Add to the removed list to ignore future messages
-    removedPiSystemsRef.current.add(piName);
+  const removePiSystem = useCallback(
+    (piName: string) => {
+      subscriptionsRef.current.delete(piName);
+      // Add to the removed list to ignore future messages
+      removedPiSystemsRef.current.add(piName);
 
-    setPiSystems((prev) => {
-      const updated = new Map(prev);
-      updated.delete(piName);
-      return updated;
-    });
+      setPiSystems((prev) => {
+        const updated = new Map(prev);
+        updated.delete(piName);
+        return updated;
+      });
 
-    // Unsubscribe from the topic
-    const topic = `${piName}/logs`;
-    client.unsubscribe(topic);
-  }, []);
+      // Unsubscribe from the topic
+      const topic = `${piName}/logs`;
+      client.unsubscribe(topic);
+    },
+    [client]
+  );
 
   const clearLogs = useCallback((piName: string) => {
     setPiSystems((prev) => {

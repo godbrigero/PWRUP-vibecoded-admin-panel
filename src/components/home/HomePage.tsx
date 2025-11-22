@@ -45,7 +45,7 @@ export function HomePage() {
             }
           />
         </section>
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <ActionCard
             href="/dashboard"
             title="Multi-Pi Dashboard"
@@ -57,6 +57,26 @@ export function HomePage() {
             }
           />
           <SystemManagementCard />
+          <ActionCard
+            href="/settings"
+            title="Connection Settings"
+            description="Configure Autobahn host and port used by the dashboards."
+            rightIcon={
+              <span className="w-8 h-8 text-emerald-600 dark:text-emerald-300">
+                ⚙️
+              </span>
+            }
+          />
+          <ActionCard
+            href="/video"
+            title="Live Video"
+            description="Subscribe to a pub topic and preview the live video feed."
+            rightIcon={
+              <span className="w-8 h-8 text-purple-600 dark:text-purple-300">
+                🎥
+              </span>
+            }
+          />
         </section>
       </main>
     </div>

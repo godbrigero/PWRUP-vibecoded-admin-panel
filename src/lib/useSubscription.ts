@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { AutobahnClient } from "@/lib/AutobahnClient";
+import type { AutobahnClient } from "autobahn-client";
 
 /**
  * Subscribe to a pub/sub topic and invoke `callback` on each message.
@@ -14,7 +14,8 @@ import { AutobahnClient } from "@/lib/AutobahnClient";
 export function useSubscription(
   topic: string,
   callback: (payload: Uint8Array) => Promise<void>,
-  client: AutobahnClient
+  client: AutobahnClient,
+  enabled: boolean = true
 ) {
   const callbackRef = useRef(callback);
 
@@ -24,6 +25,9 @@ export function useSubscription(
   }, [callback]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     client.subscribe(topic, async (payload) => {
       await callbackRef.current(payload);
     });
@@ -31,5 +35,5 @@ export function useSubscription(
     return () => {
       client.unsubscribe(topic);
     };
-  }, [topic, client]);
+  }, [topic, client, enabled]);
 }

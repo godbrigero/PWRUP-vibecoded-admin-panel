@@ -1,5 +1,7 @@
 // src/components/home/Header.tsx - Purpose: site header with branding and status
 import Image from "next/image";
+import Link from "next/link";
+import { ConnectionBadge } from "@/components/ConnectionBadge";
 
 export function Header() {
   return (
@@ -21,11 +23,14 @@ export function Header() {
               Blitz Renderer Admin
             </h1>
           </div>
-          <div className="flex items-center space-x-2">
-            <span className="h-2 w-2 bg-green-500 rounded-full" />
-            <span className="text-sm text-gray-600 dark:text-gray-300">
-              System Online
-            </span>
+          <div className="flex items-center space-x-4">
+            <ConnectionBadge />
+            <Link
+              href="/settings"
+              className="cursor-pointer text-sm text-gray-900 dark:text-white hover:underline"
+            >
+              Settings
+            </Link>
           </div>
         </div>
       </div>
