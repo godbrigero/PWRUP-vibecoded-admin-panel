@@ -3,6 +3,7 @@ export interface SystemStatusSuccess {
   status: "success";
   system_info: string;
   active_processes: string[];
+  possible_processes: string[];
   config_set: boolean;
 }
 
@@ -14,7 +15,12 @@ export interface SystemStatusError {
 export type SystemStatusResponse = SystemStatusSuccess | SystemStatusError;
 
 async function handleJsonResponse<T>(res: Response): Promise<T> {
-  const json = (await res.json()) as unknown;
+  let json: unknown;
+  try {
+    json = await res.json();
+  } catch (e) {
+    throw new Error(`Failed to parse response: ${(e as Error).message}`);
+  }
   if (!res.ok) {
     const errMsg =
       typeof (json as { message?: unknown })?.message === "string"
@@ -25,8 +31,14 @@ async function handleJsonResponse<T>(res: Response): Promise<T> {
   return json as T;
 }
 
-export async function getSystemStatus(baseUrl: string): Promise<SystemStatusSuccess> {
-  const res = await fetch(`${baseUrl}/get/system/status`, {
+export async function getSystemStatus(
+  baseUrl: string
+): Promise<SystemStatusSuccess> {
+  // Use Next.js API route as proxy to avoid CORS issues
+  const proxyUrl = `/api/watchdog/status?baseUrl=${encodeURIComponent(
+    baseUrl
+  )}`;
+  const res = await fetch(proxyUrl, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
@@ -38,8 +50,14 @@ export async function getSystemStatus(baseUrl: string): Promise<SystemStatusSucc
   return data;
 }
 
-export async function setConfig(baseUrl: string, config: string): Promise<void> {
-  const res = await fetch(`${baseUrl}/set/config`, {
+export async function setConfig(
+  baseUrl: string,
+  config: string
+): Promise<void> {
+  const proxyUrl = `/api/watchdog/config?baseUrl=${encodeURIComponent(
+    baseUrl
+  )}`;
+  const res = await fetch(proxyUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ config }),
@@ -47,8 +65,12 @@ export async function setConfig(baseUrl: string, config: string): Promise<void> 
   await handleJsonResponse<{ status: "success" }>(res);
 }
 
-export async function startProcesses(baseUrl: string, processTypes: string[]): Promise<void> {
-  const res = await fetch(`${baseUrl}/start/process`, {
+export async function startProcesses(
+  baseUrl: string,
+  processTypes: string[]
+): Promise<void> {
+  const proxyUrl = `/api/watchdog/start?baseUrl=${encodeURIComponent(baseUrl)}`;
+  const res = await fetch(proxyUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ process_types: processTypes }),
@@ -56,13 +78,15 @@ export async function startProcesses(baseUrl: string, processTypes: string[]): P
   await handleJsonResponse<{ status: "success" }>(res);
 }
 
-export async function stopProcesses(baseUrl: string, processTypes: string[]): Promise<void> {
-  const res = await fetch(`${baseUrl}/stop/process`, {
+export async function stopProcesses(
+  baseUrl: string,
+  processTypes: string[]
+): Promise<void> {
+  const proxyUrl = `/api/watchdog/stop?baseUrl=${encodeURIComponent(baseUrl)}`;
+  const res = await fetch(proxyUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ process_types: processTypes }),
   });
   await handleJsonResponse<{ status: "success" }>(res);
 }
-
-

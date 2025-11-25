@@ -1,17 +1,49 @@
-// src/app/system/page.tsx - Purpose: manage system via Watchdog API (status, config, start/stop)
+// src/app/system/page.tsx - Purpose: manage multiple watchdog hosts with process control
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSettings } from "@/lib/settings";
 import { ConnectionBadge } from "@/components/ConnectionBadge";
-import { Card, CardHeader } from "@/components/ui/Card";
+import {
+  HostCard,
+  type HostStatus,
+  type PingDataPoint,
+  AddHostForm,
+} from "@/components/system";
 import {
   getSystemStatus,
-  setConfig as apiSetConfig,
+  setConfig,
   startProcesses,
   stopProcesses,
 } from "@/lib/watchdogApi";
+
+const STORAGE_KEY = "blitz.system.hosts";
+
+function loadHostsFromStorage(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed) && parsed.every((h) => typeof h === "string")) {
+        return parsed as string[];
+      }
+    }
+  } catch {
+    // ignore corrupted storage
+  }
+  return [];
+}
+
+function saveHostsToStorage(hosts: string[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(hosts));
+  } catch {
+    // storage might be unavailable
+  }
+}
 
 export default function SystemManagementPage() {
   const { settings } = useSettings();
@@ -19,86 +51,217 @@ export default function SystemManagementPage() {
     () => `http://${settings.host}:5000`,
     [settings.host]
   );
-  const [baseUrl, setBaseUrl] = useState<string>(defaultBaseUrl);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const [systemInfo, setSystemInfo] = useState<string>("");
-  const [activeProcesses, setActiveProcesses] = useState<string[]>([]);
-  const [configSet, setConfigSet] = useState<boolean>(false);
+  const [hosts, setHosts] = useState<string[]>(() => {
+    const stored = loadHostsFromStorage();
+    return stored.length > 0 ? stored : [defaultBaseUrl];
+  });
 
-  const [configText, setConfigText] = useState<string>("");
-  const [processInput, setProcessInput] = useState<string>("");
-
-  async function refreshStatus() {
-    setLoading(true);
-    setError(null);
-    try {
-      const status = await getSystemStatus(baseUrl);
-      setSystemInfo(status.system_info);
-      setActiveProcesses(status.active_processes);
-      setConfigSet(status.config_set);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [hostStatuses, setHostStatuses] = useState<Record<string, HostStatus>>(
+    {}
+  );
+  const [pingHistories, setPingHistories] = useState<
+    Record<string, PingDataPoint[]>
+  >({});
+  const fetchedHostsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    refreshStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl]);
+    saveHostsToStorage(hosts);
+  }, [hosts]);
 
-  async function onSaveConfig() {
-    setLoading(true);
-    setError(null);
+  const refreshHostStatus = useCallback(async (hostUrl: string) => {
+    setHostStatuses((prev) => ({
+      ...prev,
+      [hostUrl]: {
+        systemInfo: prev[hostUrl]?.systemInfo || "",
+        activeProcesses: prev[hostUrl]?.activeProcesses || [],
+        possibleProcesses: prev[hostUrl]?.possibleProcesses || [],
+        configSet: prev[hostUrl]?.configSet || false,
+        ping: prev[hostUrl]?.ping || null,
+        loading: true,
+        error: null,
+      },
+    }));
+
+    const startTime = performance.now();
     try {
-      await apiSetConfig(baseUrl, configText);
-      await refreshStatus();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
+      const status = await getSystemStatus(hostUrl);
+      const endTime = performance.now();
+      const ping = Math.round(endTime - startTime);
 
-  function parseProcesses(input: string): string[] {
-    return input
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-  }
+      // Add ping to history
+      const now = new Date();
+      const timeLabel = `${now.getHours().toString().padStart(2, "0")}:${now
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+      const pingPoint: PingDataPoint = {
+        time: timeLabel,
+        ping,
+        timestamp: now.getTime(),
+      };
 
-  async function onStart() {
-    const proc = parseProcesses(processInput);
-    if (!proc.length) return;
-    setLoading(true);
-    setError(null);
-    try {
-      await startProcesses(baseUrl, proc);
-      await refreshStatus();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
+      setPingHistories((prev) => {
+        const history = prev[hostUrl] || [];
+        const newHistory = [...history, pingPoint];
+        // Keep only last 60 data points (1 minute if refreshing every second)
+        return {
+          ...prev,
+          [hostUrl]: newHistory.slice(-60),
+        };
+      });
 
-  async function onStop() {
-    const proc = parseProcesses(processInput);
-    if (!proc.length) return;
-    setLoading(true);
-    setError(null);
-    try {
-      await stopProcesses(baseUrl, proc);
-      await refreshStatus();
+      setHostStatuses((prev) => ({
+        ...prev,
+        [hostUrl]: {
+          systemInfo: status.system_info,
+          activeProcesses: status.active_processes || [],
+          possibleProcesses: status.possible_processes || [],
+          configSet: status.config_set,
+          ping,
+          loading: false,
+          error: null,
+        },
+      }));
     } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
+      setHostStatuses((prev) => ({
+        ...prev,
+        [hostUrl]: {
+          systemInfo: prev[hostUrl]?.systemInfo || "",
+          activeProcesses: prev[hostUrl]?.activeProcesses || [],
+          possibleProcesses: prev[hostUrl]?.possibleProcesses || [],
+          configSet: prev[hostUrl]?.configSet || false,
+          ping: null,
+          loading: false,
+          error: (e as Error).message,
+        },
+      }));
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    hosts.forEach((host) => {
+      // Fetch if we haven't fetched this host yet
+      if (!fetchedHostsRef.current.has(host)) {
+        fetchedHostsRef.current.add(host);
+        refreshHostStatus(host);
+      }
+    });
+  }, [hosts, refreshHostStatus]);
+
+  const addHost = useCallback((url: string) => {
+    setHosts((prev) => {
+      if (prev.includes(url)) return prev;
+      return [...prev, url];
+    });
+  }, []);
+
+  const removeHost = useCallback((url: string) => {
+    setHosts((prev) => prev.filter((h) => h !== url));
+    setHostStatuses((prev) => {
+      const next = { ...prev };
+      delete next[url];
+      return next;
+    });
+    setPingHistories((prev) => {
+      const next = { ...prev };
+      delete next[url];
+      return next;
+    });
+    fetchedHostsRef.current.delete(url);
+  }, []);
+
+  const handleStartProcess = useCallback(
+    async (hostUrl: string, processTypes: string[]) => {
+      setHostStatuses((prev) => ({
+        ...prev,
+        [hostUrl]: {
+          systemInfo: prev[hostUrl]?.systemInfo || "",
+          activeProcesses: prev[hostUrl]?.activeProcesses || [],
+          possibleProcesses: prev[hostUrl]?.possibleProcesses || [],
+          configSet: prev[hostUrl]?.configSet || false,
+          ping: prev[hostUrl]?.ping || null,
+          loading: true,
+          error: null,
+        },
+      }));
+
+      try {
+        await startProcesses(hostUrl, processTypes);
+        await refreshHostStatus(hostUrl);
+      } catch (e) {
+        setHostStatuses((prev) => ({
+          ...prev,
+          [hostUrl]: {
+            systemInfo: prev[hostUrl]?.systemInfo || "",
+            activeProcesses: prev[hostUrl]?.activeProcesses || [],
+            possibleProcesses: prev[hostUrl]?.possibleProcesses || [],
+            configSet: prev[hostUrl]?.configSet || false,
+            loading: false,
+            error: (e as Error).message,
+          },
+        }));
+      }
+    },
+    [refreshHostStatus]
+  );
+
+  const handleStopProcess = useCallback(
+    async (hostUrl: string, processTypes: string[]) => {
+      setHostStatuses((prev) => ({
+        ...prev,
+        [hostUrl]: {
+          systemInfo: prev[hostUrl]?.systemInfo || "",
+          activeProcesses: prev[hostUrl]?.activeProcesses || [],
+          possibleProcesses: prev[hostUrl]?.possibleProcesses || [],
+          configSet: prev[hostUrl]?.configSet || false,
+          ping: prev[hostUrl]?.ping || null,
+          loading: true,
+          error: null,
+        },
+      }));
+
+      try {
+        await stopProcesses(hostUrl, processTypes);
+        await refreshHostStatus(hostUrl);
+      } catch (e) {
+        setHostStatuses((prev) => ({
+          ...prev,
+          [hostUrl]: {
+            systemInfo: prev[hostUrl]?.systemInfo || "",
+            activeProcesses: prev[hostUrl]?.activeProcesses || [],
+            possibleProcesses: prev[hostUrl]?.possibleProcesses || [],
+            configSet: prev[hostUrl]?.configSet || false,
+            loading: false,
+            error: (e as Error).message,
+          },
+        }));
+      }
+    },
+    [refreshHostStatus]
+  );
+
+  const handleSetConfig = useCallback(
+    async (hostUrl: string, config: string) => {
+      try {
+        await setConfig(hostUrl, config);
+        await refreshHostStatus(hostUrl);
+      } catch (e) {
+        setHostStatuses((prev) => ({
+          ...prev,
+          [hostUrl]: {
+            systemInfo: prev[hostUrl]?.systemInfo || "",
+            activeProcesses: prev[hostUrl]?.activeProcesses || [],
+            possibleProcesses: prev[hostUrl]?.possibleProcesses || [],
+            configSet: prev[hostUrl]?.configSet || false,
+            loading: false,
+            error: (e as Error).message,
+          },
+        }));
+      }
+    },
+    [refreshHostStatus]
+  );
 
   return (
     <main className="min-h-screen text-white">
@@ -116,115 +279,42 @@ export default function SystemManagementPage() {
           <ConnectionBadge />
         </div>
 
-        <Card>
-          <CardHeader>API Connection</CardHeader>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-300 mb-1">Base URL</label>
-              <input
-                type="text"
-                className="bg-gray-900 border border-gray-700 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="http://host:5000"
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-              />
-            </div>
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={refreshStatus}
-                className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded"
-              >
-                Refresh Status
-              </button>
-            </div>
-            <div className="text-xs text-gray-400 flex items-end">
-              Defaults to http://{settings.host}:5000
-            </div>
+        <AddHostForm onAdd={addHost} defaultPort={5000} />
+
+        {hosts.length === 0 ? (
+          <div className="text-center text-gray-400 py-8">
+            No hosts added. Add a host above to get started.
           </div>
-        </Card>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>System Status</CardHeader>
-            <div className="space-y-2">
-              {loading && <div className="text-gray-400">Loading...</div>}
-              {error && <div className="text-red-400">Error: {error}</div>}
-              <div className="text-sm text-gray-300">
-                <span className="text-gray-400">System:</span>{" "}
-                {systemInfo || "—"}
-              </div>
-              <div className="text-sm text-gray-300">
-                <span className="text-gray-400">Config Set:</span>{" "}
-                <span
-                  className={configSet ? "text-emerald-400" : "text-red-400"}
-                >
-                  {configSet ? "Yes" : "No"}
-                </span>
-              </div>
-              <div>
-                <div className="text-gray-400 text-sm mb-1">
-                  Active Processes
-                </div>
-                <ul className="list-disc list-inside text-sm text-gray-300 space-y-1">
-                  {activeProcesses.length ? (
-                    activeProcesses.map((p) => <li key={p}>{p}</li>)
-                  ) : (
-                    <li className="list-none text-gray-500">None</li>
-                  )}
-                </ul>
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <CardHeader>Config</CardHeader>
-            <div className="space-y-3">
-              <textarea
-                className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500 min-h-40"
-                placeholder="Paste config text here"
-                value={configText}
-                onChange={(e) => setConfigText(e.target.value)}
+        ) : (
+          <div className="space-y-4">
+            {hosts.map((hostUrl) => (
+              <HostCard
+                key={hostUrl}
+                hostUrl={hostUrl}
+                status={
+                  hostStatuses[hostUrl] || {
+                    systemInfo: "",
+                    activeProcesses: [],
+                    possibleProcesses: [],
+                    configSet: false,
+                    ping: null,
+                    loading: false,
+                  }
+                }
+                pingHistory={pingHistories[hostUrl] || []}
+                onRefresh={() => refreshHostStatus(hostUrl)}
+                onStartProcess={(processes) =>
+                  handleStartProcess(hostUrl, processes)
+                }
+                onStopProcess={(processes) =>
+                  handleStopProcess(hostUrl, processes)
+                }
+                onSetConfig={(config) => handleSetConfig(hostUrl, config)}
+                onRemove={() => removeHost(hostUrl)}
               />
-              <button
-                type="button"
-                onClick={onSaveConfig}
-                className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded"
-              >
-                Save Config
-              </button>
-            </div>
-          </Card>
-
-          <Card>
-            <CardHeader>Processes</CardHeader>
-            <div className="space-y-3">
-              <input
-                type="text"
-                className="bg-gray-900 border border-gray-700 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Comma-separated names e.g. encoder, relay"
-                value={processInput}
-                onChange={(e) => setProcessInput(e.target.value)}
-              />
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={onStart}
-                  className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded"
-                >
-                  Start
-                </button>
-                <button
-                  type="button"
-                  onClick={onStop}
-                  className="cursor-pointer bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded"
-                >
-                  Stop
-                </button>
-              </div>
-            </div>
-          </Card>
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );
