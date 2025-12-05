@@ -1,7 +1,7 @@
 // src/components/dashboard/MultiPiGrid.tsx - Purpose: expandable grid of Pi systems with charts and logs
 import { useMemo, useState } from "react";
 import { PiSystemData } from "@/lib/hooks/useMultiPiDashboard";
-import { Card, CardHeader } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import {
   ProgressBar,
   CpuCoresChart,
@@ -62,7 +62,8 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
                         {piData.name}
                       </h3>
                       <div className="text-xs text-gray-400 mt-0.5">
-                        Last seen: {piData.lastSeen?.toLocaleTimeString() || "Never"}
+                        Last seen:{" "}
+                        {piData.lastSeen?.toLocaleTimeString() || "Never"}
                       </div>
                     </div>
                   </div>
@@ -112,7 +113,7 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
             <div
               className={`transition-all duration-300 ease-in-out border-t border-gray-700 ${
                 isExpanded
-                  ? "max-h-[1000px] opacity-100 mt-6 pt-6"
+                  ? "max-h-[3000px] opacity-100 mt-6 pt-6 overflow-visible"
                   : "max-h-0 opacity-0 overflow-hidden"
               }`}
             >
