@@ -16,6 +16,7 @@ import {
   setConfig,
   startProcesses,
   stopProcesses,
+  setProcesses,
 } from "@/lib/watchdogApi";
 
 const STORAGE_KEY = "blitz.system.hosts";
@@ -263,6 +264,41 @@ export default function SystemManagementPage() {
     [refreshHostStatus]
   );
 
+  const handleSetProcesses = useCallback(
+    async (hostUrl: string, processes: string[]) => {
+      setHostStatuses((prev) => ({
+        ...prev,
+        [hostUrl]: {
+          systemInfo: prev[hostUrl]?.systemInfo || "",
+          activeProcesses: prev[hostUrl]?.activeProcesses || [],
+          possibleProcesses: prev[hostUrl]?.possibleProcesses || [],
+          configSet: prev[hostUrl]?.configSet || false,
+          ping: prev[hostUrl]?.ping || null,
+          loading: true,
+          error: null,
+        },
+      }));
+
+      try {
+        await setProcesses(hostUrl, processes);
+        await refreshHostStatus(hostUrl);
+      } catch (e) {
+        setHostStatuses((prev) => ({
+          ...prev,
+          [hostUrl]: {
+            systemInfo: prev[hostUrl]?.systemInfo || "",
+            activeProcesses: prev[hostUrl]?.activeProcesses || [],
+            possibleProcesses: prev[hostUrl]?.possibleProcesses || [],
+            configSet: prev[hostUrl]?.configSet || false,
+            loading: false,
+            error: (e as Error).message,
+          },
+        }));
+      }
+    },
+    [refreshHostStatus]
+  );
+
   return (
     <main className="min-h-screen text-white">
       <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -310,6 +346,9 @@ export default function SystemManagementPage() {
                   handleStopProcess(hostUrl, processes)
                 }
                 onSetConfig={(config) => handleSetConfig(hostUrl, config)}
+                onSetProcesses={(processes) =>
+                  handleSetProcesses(hostUrl, processes)
+                }
                 onRemove={() => removeHost(hostUrl)}
               />
             ))}

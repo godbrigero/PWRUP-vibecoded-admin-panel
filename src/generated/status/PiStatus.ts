@@ -69,6 +69,17 @@ export interface LogMessage {
   prefix: string;
   message: string;
   color: string;
+  piName: string;
+}
+
+export interface Ping {
+  timestamp: string;
+}
+
+export interface Pong {
+  piName: string;
+  timestampMsReceived: string;
+  timestampMsOriginal: string;
 }
 
 function createBaseStatusBase(): StatusBase {
@@ -436,7 +447,7 @@ export const PiStatus: MessageFns<PiStatus> = {
 };
 
 function createBaseLogMessage(): LogMessage {
-  return { type: 0, prefix: "", message: "", color: "" };
+  return { type: 0, prefix: "", message: "", color: "", piName: "" };
 }
 
 export const LogMessage: MessageFns<LogMessage> = {
@@ -452,6 +463,9 @@ export const LogMessage: MessageFns<LogMessage> = {
     }
     if (message.color !== "") {
       writer.uint32(34).string(message.color);
+    }
+    if (message.piName !== "") {
+      writer.uint32(42).string(message.piName);
     }
     return writer;
   },
@@ -495,6 +509,14 @@ export const LogMessage: MessageFns<LogMessage> = {
           message.color = reader.string();
           continue;
         }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.piName = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -510,6 +532,7 @@ export const LogMessage: MessageFns<LogMessage> = {
       prefix: isSet(object.prefix) ? globalThis.String(object.prefix) : "",
       message: isSet(object.message) ? globalThis.String(object.message) : "",
       color: isSet(object.color) ? globalThis.String(object.color) : "",
+      piName: isSet(object.piName) ? globalThis.String(object.piName) : "",
     };
   },
 
@@ -527,6 +550,9 @@ export const LogMessage: MessageFns<LogMessage> = {
     if (message.color !== "") {
       obj.color = message.color;
     }
+    if (message.piName !== "") {
+      obj.piName = message.piName;
+    }
     return obj;
   },
 
@@ -539,6 +565,157 @@ export const LogMessage: MessageFns<LogMessage> = {
     message.prefix = object.prefix ?? "";
     message.message = object.message ?? "";
     message.color = object.color ?? "";
+    message.piName = object.piName ?? "";
+    return message;
+  },
+};
+
+function createBasePing(): Ping {
+  return { timestamp: "0" };
+}
+
+export const Ping: MessageFns<Ping> = {
+  encode(message: Ping, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.timestamp !== "0") {
+      writer.uint32(8).int64(message.timestamp);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Ping {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePing();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.timestamp = reader.int64().toString();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Ping {
+    return { timestamp: isSet(object.timestamp) ? globalThis.String(object.timestamp) : "0" };
+  },
+
+  toJSON(message: Ping): unknown {
+    const obj: any = {};
+    if (message.timestamp !== "0") {
+      obj.timestamp = message.timestamp;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Ping>, I>>(base?: I): Ping {
+    return Ping.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Ping>, I>>(object: I): Ping {
+    const message = createBasePing();
+    message.timestamp = object.timestamp ?? "0";
+    return message;
+  },
+};
+
+function createBasePong(): Pong {
+  return { piName: "", timestampMsReceived: "0", timestampMsOriginal: "0" };
+}
+
+export const Pong: MessageFns<Pong> = {
+  encode(message: Pong, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.piName !== "") {
+      writer.uint32(10).string(message.piName);
+    }
+    if (message.timestampMsReceived !== "0") {
+      writer.uint32(16).int64(message.timestampMsReceived);
+    }
+    if (message.timestampMsOriginal !== "0") {
+      writer.uint32(24).int64(message.timestampMsOriginal);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Pong {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePong();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.piName = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.timestampMsReceived = reader.int64().toString();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.timestampMsOriginal = reader.int64().toString();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Pong {
+    return {
+      piName: isSet(object.piName) ? globalThis.String(object.piName) : "",
+      timestampMsReceived: isSet(object.timestampMsReceived) ? globalThis.String(object.timestampMsReceived) : "0",
+      timestampMsOriginal: isSet(object.timestampMsOriginal) ? globalThis.String(object.timestampMsOriginal) : "0",
+    };
+  },
+
+  toJSON(message: Pong): unknown {
+    const obj: any = {};
+    if (message.piName !== "") {
+      obj.piName = message.piName;
+    }
+    if (message.timestampMsReceived !== "0") {
+      obj.timestampMsReceived = message.timestampMsReceived;
+    }
+    if (message.timestampMsOriginal !== "0") {
+      obj.timestampMsOriginal = message.timestampMsOriginal;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Pong>, I>>(base?: I): Pong {
+    return Pong.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Pong>, I>>(object: I): Pong {
+    const message = createBasePong();
+    message.piName = object.piName ?? "";
+    message.timestampMsReceived = object.timestampMsReceived ?? "0";
+    message.timestampMsOriginal = object.timestampMsOriginal ?? "0";
     return message;
   },
 };

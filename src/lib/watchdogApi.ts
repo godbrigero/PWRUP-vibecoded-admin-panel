@@ -90,3 +90,18 @@ export async function stopProcesses(
   });
   await handleJsonResponse<{ status: "success" }>(res);
 }
+
+export async function setProcesses(
+  baseUrl: string,
+  processes: string[]
+): Promise<void> {
+  const proxyUrl = `/api/watchdog/set-processes?baseUrl=${encodeURIComponent(
+    baseUrl
+  )}`;
+  const res = await fetch(proxyUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ processes }),
+  });
+  await handleJsonResponse<{ status: "success" }>(res);
+}

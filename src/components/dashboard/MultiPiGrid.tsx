@@ -24,20 +24,20 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
     [piSystems]
   );
 
-  if (activeSystems.length === 0) {
-    return (
-      <Card>
-        <CardHeader>Pi Systems</CardHeader>
-        <div className="text-gray-400 text-center py-8">
-          No active Pi systems. Add some systems above to see their data here.
-        </div>
-      </Card>
-    );
-  }
-
   const handlePiClick = (piName: string) => {
     setExpandedPi(expandedPi === piName ? null : piName);
   };
+
+  if (activeSystems.length === 0) {
+    return (
+      <div className="text-center py-12 border border-dashed border-gray-700 rounded-lg bg-gray-900/30">
+        <div className="text-gray-400 mb-2">No active Pi systems</div>
+        <div className="text-xs text-gray-500">
+          Systems will appear here when they start sending data
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -45,49 +45,74 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
         const isExpanded = expandedPi === piData.name;
 
         return (
-          <Card key={piData.name} className="overflow-hidden">
+          <Card
+            key={piData.name}
+            className="overflow-hidden border border-gray-700 hover:border-emerald-500/50 transition-all bg-gradient-to-br from-gray-800 to-gray-850"
+          >
             <div
-              className="cursor-pointer hover:bg-gray-700/50 transition-colors duration-200 -m-6 p-6"
+              className="cursor-pointer hover:bg-gray-700/30 transition-colors duration-200 -m-6 p-6"
               onClick={() => handlePiClick(piData.name)}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <CardHeader className="mb-0">
-                    {piData.name}
-                    <span className="text-sm text-green-400 ml-2">●</span>
-                  </CardHeader>
-                  <div className="flex space-x-4 text-sm">
-                    <span className="text-blue-400">
-                      CPU: {formatPercentage(piData.status?.cpuUsageTotal || 0)}
-                    </span>
-                    <span className="text-green-400">
-                      RAM: {formatPercentage(piData.status?.memoryUsage || 0)}
-                    </span>
-                    <span className="text-yellow-400">
-                      Disk: {formatPercentage(piData.status?.diskUsage || 0)}
-                    </span>
+                <div className="flex items-center space-x-4 flex-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"></div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-lg font-semibold text-gray-200 truncate">
+                        {piData.name}
+                      </h3>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        Last seen: {piData.lastSeen?.toLocaleTimeString() || "Never"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm flex-shrink-0">
+                    <div className="text-center">
+                      <div className="text-blue-400 font-semibold">
+                        {formatPercentage(piData.status?.cpuUsageTotal || 0)}
+                      </div>
+                      <div className="text-xs text-gray-500">CPU</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-emerald-400 font-semibold">
+                        {formatPercentage(piData.status?.memoryUsage || 0)}
+                      </div>
+                      <div className="text-xs text-gray-500">RAM</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-yellow-400 font-semibold">
+                        {formatPercentage(piData.status?.diskUsage || 0)}
+                      </div>
+                      <div className="text-xs text-gray-500">Disk</div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <div className="text-xs text-gray-400">
-                    Last seen:{" "}
-                    {piData.lastSeen?.toLocaleTimeString() || "Never"}
-                  </div>
-                  <div
-                    className={`transform transition-transform duration-200 ${
-                      isExpanded ? "rotate-180" : ""
-                    }`}
+                <div
+                  className={`ml-4 transform transition-transform duration-200 text-gray-400 ${
+                    isExpanded ? "rotate-180" : ""
+                  }`}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    ▼
-                  </div>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
                 </div>
               </div>
             </div>
 
             <div
-              className={`transition-all duration-300 ease-in-out ${
+              className={`transition-all duration-300 ease-in-out border-t border-gray-700 ${
                 isExpanded
-                  ? "max-h-[1000px] opacity-100 mt-6"
+                  ? "max-h-[1000px] opacity-100 mt-6 pt-6"
                   : "max-h-0 opacity-0 overflow-hidden"
               }`}
             >

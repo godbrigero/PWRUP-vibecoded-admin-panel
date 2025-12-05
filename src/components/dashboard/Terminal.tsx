@@ -17,12 +17,12 @@ export function Terminal({ messages, onClear }: TerminalProps) {
   }, [messages]);
 
   return (
-    <div className="bg-black rounded-lg p-4 h-fit lg:h-[800px] flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-green-400">Terminal</h2>
+    <div className="bg-black rounded-lg p-4 h-fit lg:h-[800px] flex flex-col border border-gray-700">
+      <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-800">
+        <h3 className="text-lg font-semibold text-emerald-400">Terminal Logs</h3>
         <button
           onClick={onClear}
-          className="text-xs text-gray-400 hover:text-white px-2 py-1 border border-gray-600 rounded transition-colors"
+          className="cursor-pointer text-xs text-gray-400 hover:text-emerald-400 hover:border-emerald-500 px-3 py-1.5 border border-gray-600 rounded transition-colors"
         >
           Clear
         </button>

@@ -1,16 +1,19 @@
 // src/components/dashboard/PiSystemManager.tsx - Purpose: CRUD list for Pi systems
 import { useState } from "react";
-import { Card, CardHeader } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { PiSystemData } from "@/lib/hooks/useMultiPiDashboard";
+import { formatPercentage } from "@/lib/utils/formatters";
 
 interface PiSystemManagerProps {
   piSystems: Map<string, PiSystemData>;
+  topic: string;
   onAddPi: (name: string) => void;
   onRemovePi: (name: string) => void;
 }
 
 export function PiSystemManager({
   piSystems,
+  topic,
   onAddPi,
   onRemovePi,
 }: PiSystemManagerProps) {
@@ -27,81 +30,106 @@ export function PiSystemManager({
     if (e.key === "Enter") handleAddPi();
   };
 
-  const getStatusColor = (piData: PiSystemData) => {
-    if (!piData.lastSeen) return "text-gray-500";
+  const getStatusBadge = (piData: PiSystemData) => {
+    if (!piData.lastSeen) {
+      return (
+        <span className="px-2 py-0.5 rounded text-xs bg-gray-700 text-gray-400 border border-gray-600">
+          Never connected
+        </span>
+      );
+    }
     const timeDiff = Date.now() - piData.lastSeen.getTime();
-    if (timeDiff < 30000) return "text-green-400"; // Within 30 seconds
-    if (timeDiff < 60000) return "text-yellow-400"; // Within 1 minute
-    return "text-red-400"; // Over 1 minute
-  };
-
-  const getStatusText = (piData: PiSystemData) => {
-    if (!piData.lastSeen) return "Never connected";
-    const timeDiff = Date.now() - piData.lastSeen.getTime();
-    if (timeDiff < 5000) return "Active";
-    if (timeDiff < 30000) return "Recent";
-    if (timeDiff < 60000) return "Inactive";
-    return "Offline";
+    if (timeDiff < 5000) {
+      return (
+        <span className="px-2 py-0.5 rounded text-xs bg-emerald-900/30 text-emerald-400 border border-emerald-700/50">
+          Active
+        </span>
+      );
+    }
+    if (timeDiff < 30000) {
+      return (
+        <span className="px-2 py-0.5 rounded text-xs bg-yellow-900/30 text-yellow-400 border border-yellow-700/50">
+          Recent
+        </span>
+      );
+    }
+    return (
+      <span className="px-2 py-0.5 rounded text-xs bg-red-900/30 text-red-400 border border-red-700/50">
+        Offline
+      </span>
+    );
   };
 
   return (
-    <Card>
-      <CardHeader>Pi Systems Manager</CardHeader>
+    <Card className="bg-gradient-to-br from-gray-800 to-gray-850 border border-gray-700">
       <div className="mb-4">
+        <h2 className="text-xl font-semibold mb-2 text-gray-200">
+          Pi Systems
+        </h2>
         <div className="flex gap-2">
           <input
             type="text"
             value={newPiName}
             onChange={(e) => setNewPiName(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Enter Pi name (e.g., 'pi-livingroom')"
-            className="flex-1 px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+            placeholder="Enter Pi name to pre-initialize"
+            className="flex-1 px-3 py-2 bg-gray-900/50 text-white rounded border border-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           />
           <button
             onClick={handleAddPi}
             disabled={!newPiName.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+            className="cursor-pointer px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded transition-colors font-medium"
           >
-            Add Pi
+            Add
           </button>
         </div>
-        <div className="text-xs text-gray-400 mt-1">
-          Topic will be:{" "}
-          {newPiName.trim() ? `${newPiName.trim()}/logs` : "<name>/logs"}
+        <div className="text-xs text-gray-400 mt-2">
+          Systems are auto-discovered from topic:{" "}
+          <span className="font-mono text-emerald-400">{topic}</span>
         </div>
       </div>
 
       {piSystems.size === 0 ? (
-        <div className="text-gray-400 text-center py-4">
-          No Pi systems added yet. Add one above to get started.
+        <div className="text-center py-8 border border-dashed border-gray-700 rounded-lg">
+          <div className="text-gray-400 mb-2">No Pi systems detected</div>
+          <div className="text-xs text-gray-500">
+            Systems will appear automatically when messages are received
+          </div>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {Array.from(piSystems.values()).map((piData) => (
             <div
               key={piData.name}
-              className="flex items-center justify-between p-3 bg-gray-700 rounded"
+              className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 hover:border-emerald-500/50 transition-all hover:shadow-lg hover:shadow-emerald-500/10"
             >
-              <div className="flex items-center space-x-3">
-                <div className="flex flex-col">
-                  <span className="font-medium">{piData.name}</span>
-                  <span className="text-xs text-gray-400">
-                    Topic: {piData.name}/logs
-                  </span>
-                </div>
-                <span className={`text-sm ${getStatusColor(piData)}`}>
-                  {getStatusText(piData)}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                {piData.status && (
-                  <div className="text-xs text-gray-400">
-                    CPU: {piData.status.cpuUsageTotal.toFixed(1)}%
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-200 truncate mb-1">
+                    {piData.name}
                   </div>
+                  <div className="text-xs text-gray-500 font-mono truncate">
+                    {topic}
+                  </div>
+                </div>
+                {getStatusBadge(piData)}
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                {piData.status ? (
+                  <>
+                    <div className="text-gray-400">CPU</div>
+                    <div className="font-mono font-semibold text-emerald-400">
+                      {formatPercentage(piData.status.cpuUsageTotal)}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-xs text-gray-500">No data yet</div>
                 )}
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-700">
                 <button
                   onClick={() => onRemovePi(piData.name)}
-                  className="text-red-400 hover:text-red-300 text-sm px-2 py-1 rounded hover:bg-red-900/20 transition-colors"
+                  className="cursor-pointer w-full text-xs text-red-400 hover:text-red-300 hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
                 >
                   Remove
                 </button>

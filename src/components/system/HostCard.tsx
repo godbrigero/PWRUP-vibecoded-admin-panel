@@ -29,6 +29,7 @@ interface HostCardProps {
   onStartProcess: (processes: string[]) => void;
   onStopProcess: (processes: string[]) => void;
   onSetConfig: (config: string) => void;
+  onSetProcesses: (processes: string[]) => void;
   onRemove: () => void;
 }
 
@@ -40,6 +41,7 @@ export function HostCard({
   onStartProcess,
   onStopProcess,
   onSetConfig,
+  onSetProcesses,
   onRemove,
 }: HostCardProps) {
   const activeSet = new Set(status.activeProcesses || []);
@@ -47,6 +49,10 @@ export function HostCard({
   const [showConfig, setShowConfig] = React.useState(false);
   const [configInput, setConfigInput] = React.useState("");
   const [showPingChart, setShowPingChart] = React.useState(false);
+  const [showSetProcesses, setShowSetProcesses] = React.useState(false);
+  const [selectedProcesses, setSelectedProcesses] = React.useState<Set<string>>(
+    new Set()
+  );
 
   // Continuous refresh when ping chart is open
   React.useEffect(() => {
@@ -64,6 +70,25 @@ export function HostCard({
     const configValue = configInput.trim();
     setConfigInput("");
     await onSetConfig(configValue);
+  }
+
+  async function handleSetProcesses() {
+    if (selectedProcesses.size === 0) return;
+    const processesArray = Array.from(selectedProcesses);
+    setSelectedProcesses(new Set());
+    await onSetProcesses(processesArray);
+  }
+
+  function toggleProcessSelection(process: string) {
+    setSelectedProcesses((prev) => {
+      const next = new Set(prev);
+      if (next.has(process)) {
+        next.delete(process);
+      } else {
+        next.add(process);
+      }
+      return next;
+    });
   }
 
   return (
@@ -125,13 +150,25 @@ export function HostCard({
           </div>
         )}
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => setShowConfig(!showConfig)}
             className="cursor-pointer text-xs text-gray-400 hover:text-gray-300 px-2 py-1 rounded hover:bg-gray-900/50 transition-colors"
           >
             {showConfig ? "Hide" : "Set"} Config
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowSetProcesses(!showSetProcesses);
+              if (!showSetProcesses) {
+                setSelectedProcesses(new Set());
+              }
+            }}
+            className="cursor-pointer text-xs text-gray-400 hover:text-gray-300 px-2 py-1 rounded hover:bg-gray-900/50 transition-colors"
+          >
+            {showSetProcesses ? "Hide" : "Set"} Processes
           </button>
         </div>
 
@@ -152,6 +189,61 @@ export function HostCard({
               className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded text-sm transition-colors"
             >
               Set Config
+            </button>
+          </div>
+        )}
+
+        {showSetProcesses && (
+          <div className="space-y-2 p-3 bg-gray-900/50 rounded border border-gray-700/50">
+            <div className="text-xs text-gray-400 mb-2">
+              Select processes to set (multiple selection)
+            </div>
+            {allProcesses.length === 0 ? (
+              <div className="text-sm text-gray-500 text-center py-4">
+                No processes available
+              </div>
+            ) : (
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {allProcesses.map((process) => {
+                  const isSelected = selectedProcesses.has(process);
+                  return (
+                    <button
+                      key={process}
+                      type="button"
+                      onClick={() => toggleProcessSelection(process)}
+                      className={`cursor-pointer w-full text-left px-3 py-2 rounded border transition-colors ${
+                        isSelected
+                          ? "bg-emerald-900/30 border-emerald-700/50 text-emerald-400"
+                          : "bg-gray-800/50 border-gray-700/50 text-gray-200 hover:border-gray-600"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`w-4 h-4 rounded border flex items-center justify-center ${
+                            isSelected
+                              ? "bg-emerald-600 border-emerald-500"
+                              : "border-gray-600"
+                          }`}
+                        >
+                          {isSelected && (
+                            <span className="text-xs text-white">✓</span>
+                          )}
+                        </span>
+                        <span className="font-mono text-sm">{process}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleSetProcesses}
+              disabled={selectedProcesses.size === 0 || status.loading}
+              className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded text-sm transition-colors"
+            >
+              Set {selectedProcesses.size > 0 ? `${selectedProcesses.size} ` : ""}
+              Process{selectedProcesses.size !== 1 ? "es" : ""}
             </button>
           </div>
         )}
