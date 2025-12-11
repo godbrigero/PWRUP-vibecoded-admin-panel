@@ -20,6 +20,14 @@ import {
 } from "@/lib/watchdogApi";
 
 const STORAGE_KEY = "blitz.system.hosts";
+const CONFIG_HISTORY_KEY = "blitz.system.configHistory";
+
+type HostConfigHistory = {
+  last?: string;
+  previous?: string;
+};
+
+type HostConfigHistoryMap = Record<string, HostConfigHistory>;
 
 function loadHostsFromStorage(): string[] {
   if (typeof window === "undefined") return [];
@@ -46,6 +54,44 @@ function saveHostsToStorage(hosts: string[]): void {
   }
 }
 
+function loadConfigHistoryFromStorage(): HostConfigHistoryMap {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(CONFIG_HISTORY_KEY);
+    if (!raw) return {};
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+
+    const result: HostConfigHistoryMap = {};
+    for (const [host, value] of Object.entries(
+      parsed as Record<string, unknown>
+    )) {
+      if (!value || typeof value !== "object") continue;
+      const typed = value as { last?: unknown; previous?: unknown };
+      const last = typeof typed.last === "string" ? typed.last : undefined;
+      const previous =
+        typeof typed.previous === "string" ? typed.previous : undefined;
+      if (last !== undefined || previous !== undefined) {
+        result[host] = { last, previous };
+      }
+    }
+    return result;
+  } catch {
+    // ignore corrupted storage
+  }
+  return {};
+}
+
+function saveConfigHistoryToStorage(history: HostConfigHistoryMap): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CONFIG_HISTORY_KEY, JSON.stringify(history));
+  } catch {
+    // storage might be unavailable
+  }
+}
+
 export default function SystemManagementPage() {
   const { settings } = useSettings();
   const defaultBaseUrl = useMemo(
@@ -64,11 +110,25 @@ export default function SystemManagementPage() {
   const [pingHistories, setPingHistories] = useState<
     Record<string, PingDataPoint[]>
   >({});
+  const [hostConfigHistory, setHostConfigHistory] =
+    useState<HostConfigHistoryMap>({});
   const fetchedHostsRef = useRef<Set<string>>(new Set());
+  const hasLoadedConfigHistoryRef = useRef(false);
 
   useEffect(() => {
     saveHostsToStorage(hosts);
   }, [hosts]);
+
+  useEffect(() => {
+    const loaded = loadConfigHistoryFromStorage();
+    setHostConfigHistory(loaded);
+    hasLoadedConfigHistoryRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedConfigHistoryRef.current) return;
+    saveConfigHistoryToStorage(hostConfigHistory);
+  }, [hostConfigHistory]);
 
   const refreshHostStatus = useCallback(async (hostUrl: string) => {
     setHostStatuses((prev) => ({
@@ -169,6 +229,11 @@ export default function SystemManagementPage() {
       delete next[url];
       return next;
     });
+    setHostConfigHistory((prev) => {
+      const next = { ...prev };
+      delete next[url];
+      return next;
+    });
     fetchedHostsRef.current.delete(url);
   }, []);
 
@@ -246,6 +311,17 @@ export default function SystemManagementPage() {
     async (hostUrl: string, config: string) => {
       try {
         await setConfig(hostUrl, config);
+        setHostConfigHistory((prev) => {
+          const current = prev[hostUrl];
+          const updated: HostConfigHistory = {
+            last: config,
+            previous: current?.last,
+          };
+          return {
+            ...prev,
+            [hostUrl]: updated,
+          };
+        });
         await refreshHostStatus(hostUrl);
       } catch (e) {
         setHostStatuses((prev) => ({
@@ -262,6 +338,16 @@ export default function SystemManagementPage() {
       }
     },
     [refreshHostStatus]
+  );
+
+  const handleRollbackConfig = useCallback(
+    async (hostUrl: string) => {
+      const history = hostConfigHistory[hostUrl];
+      const savedConfig = history?.last;
+      if (!savedConfig) return;
+      await handleSetConfig(hostUrl, savedConfig);
+    },
+    [hostConfigHistory, handleSetConfig]
   );
 
   const handleSetProcesses = useCallback(
@@ -349,6 +435,8 @@ export default function SystemManagementPage() {
                 onSetProcesses={(processes) =>
                   handleSetProcesses(hostUrl, processes)
                 }
+                onRollbackConfig={() => handleRollbackConfig(hostUrl)}
+                canRollbackConfig={!!hostConfigHistory[hostUrl]?.last}
                 onRemove={() => removeHost(hostUrl)}
               />
             ))}

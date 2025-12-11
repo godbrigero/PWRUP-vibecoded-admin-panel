@@ -30,6 +30,8 @@ interface HostCardProps {
   onStopProcess: (processes: string[]) => void;
   onSetConfig: (config: string) => void;
   onSetProcesses: (processes: string[]) => void;
+  onRollbackConfig: () => void;
+  canRollbackConfig: boolean;
   onRemove: () => void;
 }
 
@@ -42,6 +44,8 @@ export function HostCard({
   onStopProcess,
   onSetConfig,
   onSetProcesses,
+  onRollbackConfig,
+  canRollbackConfig,
   onRemove,
 }: HostCardProps) {
   const activeSet = new Set(status.activeProcesses || []);
@@ -98,7 +102,9 @@ export function HostCard({
           <div className="flex items-center gap-3">
             <span className="font-mono text-sm text-gray-200">{hostUrl}</span>
             <span className="text-xs text-gray-500">•</span>
-            <span className="text-xs text-gray-400">{status.systemInfo || "—"}</span>
+            <span className="text-xs text-gray-400">
+              {status.systemInfo || "—"}
+            </span>
             {status.ping !== null && status.ping !== undefined && (
               <>
                 <span className="text-xs text-gray-500">•</span>
@@ -121,7 +127,9 @@ export function HostCard({
               </span>
             )}
             {status.loading && (
-              <span className="text-xs text-gray-400 animate-pulse">Loading...</span>
+              <span className="text-xs text-gray-400 animate-pulse">
+                Loading...
+              </span>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -174,7 +182,9 @@ export function HostCard({
 
         {showConfig && (
           <div className="space-y-2 p-3 bg-gray-900/50 rounded border border-gray-700/50">
-            <div className="text-xs text-gray-400 mb-1">Base64 Config String</div>
+            <div className="text-xs text-gray-400 mb-1">
+              Base64 Config String
+            </div>
             <textarea
               value={configInput}
               onChange={(e) => setConfigInput(e.target.value)}
@@ -182,14 +192,24 @@ export function HostCard({
               className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm font-mono text-gray-200 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
               rows={3}
             />
-            <button
-              type="button"
-              onClick={handleSetConfig}
-              disabled={!configInput.trim() || status.loading}
-              className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded text-sm transition-colors"
-            >
-              Set Config
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSetConfig}
+                disabled={!configInput.trim() || status.loading}
+                className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded text-sm transition-colors"
+              >
+                Set Config
+              </button>
+              <button
+                type="button"
+                onClick={onRollbackConfig}
+                disabled={!canRollbackConfig || status.loading}
+                className="cursor-pointer text-xs text-amber-400 hover:text-amber-300 disabled:text-gray-500 disabled:cursor-not-allowed px-3 py-1.5 rounded border border-amber-500/40 hover:border-amber-400/70 transition-colors"
+              >
+                Use Previous Config
+              </button>
+            </div>
           </div>
         )}
 
@@ -242,7 +262,8 @@ export function HostCard({
               disabled={selectedProcesses.size === 0 || status.loading}
               className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded text-sm transition-colors"
             >
-              Set {selectedProcesses.size > 0 ? `${selectedProcesses.size} ` : ""}
+              Set{" "}
+              {selectedProcesses.size > 0 ? `${selectedProcesses.size} ` : ""}
               Process{selectedProcesses.size !== 1 ? "es" : ""}
             </button>
           </div>
