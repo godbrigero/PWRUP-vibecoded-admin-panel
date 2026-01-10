@@ -10,6 +10,18 @@ export interface PingResult {
   timestamp: Date;
 }
 
+type PendingPing = {
+  sentAtMs: number;
+  pingTimestampMs: string;
+  timeoutId: ReturnType<typeof setTimeout>;
+  resolve?: (latencyMs: number) => void;
+  reject?: (error: Error) => void;
+};
+
+function sleepMs(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
 export function usePing() {
   const { settings } = useSettings();
   const client = useMemo(
@@ -20,8 +32,16 @@ export function usePing() {
     new Map()
   );
   const [isConnected, setIsConnected] = useState(false);
-  const pendingPingsRef = useRef<Map<string, number>>(new Map()); // piName -> sentTimestamp
+  const pendingPingsRef = useRef<Map<string, PendingPing>>(new Map()); // piName -> pending ping info
   const pongSubscriptionRef = useRef<string | null>(null);
+
+  const clearPendingPing = useCallback((piName: string, error?: Error) => {
+    const pending = pendingPingsRef.current.get(piName);
+    if (!pending) return;
+    clearTimeout(pending.timeoutId);
+    pendingPingsRef.current.delete(piName);
+    if (error && pending.reject) pending.reject(error);
+  }, []);
 
   // Initialize connection
   useEffect(() => {
@@ -33,7 +53,7 @@ export function usePing() {
         const connected = client.isConnected();
         setIsConnected(connected);
         return connected;
-      } catch (error) {
+      } catch {
         setIsConnected(false);
         return false;
       }
@@ -70,23 +90,23 @@ export function usePing() {
       try {
         const pong = Pong.decode(payload);
         const piName = pong.piName;
-        const originalTimestamp = BigInt(pong.timestampMsOriginal);
-        const receivedTimestamp = BigInt(pong.timestampMsReceived);
+        if (!piName) return;
 
         // Find the corresponding ping
-        const sentTimestamp = pendingPingsRef.current.get(piName);
-        if (!sentTimestamp) {
-          console.warn("[Ping] Received pong for unknown ping from:", piName);
+        const pending = pendingPingsRef.current.get(piName);
+        if (!pending) return;
+
+        // Only accept pongs that correlate to our last ping for this Pi.
+        if (!pong.timestampMsOriginal || pong.timestampMsOriginal === "0")
           return;
-        }
+        if (pong.timestampMsOriginal !== pending.pingTimestampMs) return;
 
         // Calculate round trip latency
-        // We use the difference between when we sent and now, but also consider server processing
-        const now = Date.now();
-        const roundTripLatency = now - sentTimestamp;
+        const roundTripLatency = Math.max(0, Date.now() - pending.sentAtMs);
 
         // Remove from pending
-        pendingPingsRef.current.delete(piName);
+        clearPendingPing(piName);
+        if (pending.resolve) pending.resolve(roundTripLatency);
 
         setPingResults((prev) => {
           const updated = new Map(prev);
@@ -103,10 +123,8 @@ export function usePing() {
     };
 
     try {
-      console.log("[Ping] Subscribing to pong topic:", pongTopic);
       client.subscribe(pongTopic, handlePong);
       pongSubscriptionRef.current = pongTopic;
-      console.log("[Ping] ✓ Subscribed to pong topic");
     } catch (error) {
       console.error("[Ping] Failed to subscribe to pong topic:", error);
     }
@@ -115,13 +133,51 @@ export function usePing() {
       if (pongSubscriptionRef.current) {
         try {
           client.unsubscribe(pongSubscriptionRef.current);
-        } catch (e) {
+        } catch {
           // Ignore unsubscribe errors
         }
         pongSubscriptionRef.current = null;
       }
     };
-  }, [client, isConnected]);
+  }, [client, isConnected, clearPendingPing]);
+
+  const sendPingAwait = useCallback(
+    async (piName: string, timeoutMs: number = 2000): Promise<number> => {
+      if (!isConnected || !client.isConnected()) {
+        throw new Error("Not connected");
+      }
+
+      const timestampMs = Date.now();
+      const pingTimestampMs = BigInt(timestampMs).toString();
+      const pingTopic = "pi-ping";
+      const pingBytes = Ping.encode(
+        Ping.create({ timestamp: pingTimestampMs })
+      ).finish();
+
+      // Replace any existing pending ping for this Pi.
+      clearPendingPing(piName, new Error("Superseded by a newer ping"));
+
+      const latency = await new Promise<number>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          pendingPingsRef.current.delete(piName);
+          reject(new Error("Ping timed out"));
+        }, timeoutMs);
+
+        pendingPingsRef.current.set(piName, {
+          sentAtMs: timestampMs,
+          pingTimestampMs,
+          timeoutId,
+          resolve,
+          reject,
+        });
+
+        client.publish(pingTopic, pingBytes);
+      });
+
+      return latency;
+    },
+    [client, clearPendingPing, isConnected]
+  );
 
   const sendPing = useCallback(
     (piName: string) => {
@@ -131,27 +187,32 @@ export function usePing() {
       }
 
       try {
-        const timestamp = Date.now();
-        const ping = Ping.create({
-          timestamp: BigInt(timestamp).toString(),
-        });
-
         const pingTopic = "pi-ping";
-        const pingBytes = Ping.encode(ping).finish();
+        const timestampMs = Date.now();
+        const pingTimestampMs = BigInt(timestampMs).toString();
+        const pingBytes = Ping.encode(
+          Ping.create({ timestamp: pingTimestampMs })
+        ).finish();
 
-        // Store the sent timestamp for this specific pi
-        // We'll match it when we receive the pong with matching pi_name
-        pendingPingsRef.current.set(piName, timestamp);
+        // Store the sent timestamp for this specific pi (best-effort)
+        clearPendingPing(piName);
+        const timeoutId = setTimeout(() => {
+          pendingPingsRef.current.delete(piName);
+        }, 2000);
+        pendingPingsRef.current.set(piName, {
+          sentAtMs: timestampMs,
+          pingTimestampMs,
+          timeoutId,
+        });
 
         // Publish ping (all backends will respond)
         client.publish(pingTopic, pingBytes);
-        console.log("[Ping] Sent ping, expecting response from:", piName);
       } catch (error) {
         console.error("[Ping] Failed to send ping:", error);
-        pendingPingsRef.current.delete(piName);
+        clearPendingPing(piName);
       }
     },
-    [client, isConnected]
+    [client, clearPendingPing, isConnected]
   );
 
   const pingAll = useCallback(
@@ -163,11 +224,42 @@ export function usePing() {
     [sendPing]
   );
 
+  const runPingTest = useCallback(
+    async (piName: string, count: number = 20, intervalMs: number = 50) => {
+      const samples: Array<number | null> = [];
+
+      for (let i = 0; i < count; i += 1) {
+        try {
+          // Wait for each response to avoid pending ping overwrites.
+          const latency = await sendPingAwait(piName, 2000);
+          samples.push(latency);
+        } catch {
+          samples.push(null);
+        }
+
+        if (i < count - 1) {
+          await sleepMs(intervalMs);
+        }
+      }
+
+      return samples;
+    },
+    [sendPingAwait]
+  );
+
+  useEffect(() => {
+    const pending = pendingPingsRef.current;
+    return () => {
+      pending.forEach((p) => clearTimeout(p.timeoutId));
+      pending.clear();
+    };
+  }, []);
+
   return {
     pingResults,
     sendPing,
     pingAll,
     isConnected,
+    runPingTest,
   };
 }
-

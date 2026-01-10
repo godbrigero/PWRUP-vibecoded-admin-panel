@@ -74,112 +74,118 @@ export function useMultiPiDashboard() {
     };
   }, [client]);
 
-  const handleLogMessage = useCallback(
-    async (payload: Uint8Array) => {
-      try {
-        console.log("[Dashboard] Received message on log topic, size:", payload.length);
-        const baseMessage = StatusBase.decode(payload);
-        console.log("[Dashboard] Decoded base message, type:", baseMessage.type);
-        
-        if (baseMessage.type !== StatusType.LOG_MESSAGE) {
-          console.warn("[Dashboard] Message is not LOG_MESSAGE, type:", baseMessage.type);
-          return;
-        }
+  const handleLogMessage = useCallback(async (payload: Uint8Array) => {
+    try {
+      console.log(
+        "[Dashboard] Received message on log topic, size:",
+        payload.length
+      );
+      const baseMessage = StatusBase.decode(payload);
+      console.log("[Dashboard] Decoded base message, type:", baseMessage.type);
 
-        const logMsg = LogMessage.decode(payload);
-        const piName = logMsg.piName || null;
-        console.log("[Dashboard] Decoded log message from pi:", piName);
-        
-        if (!piName) {
-          console.warn("Received LOG_MESSAGE without pi_name");
-          return;
-        }
-
-        // Ignore messages from intentionally removed Pi systems
-        if (removedPiSystemsRef.current.has(piName)) {
-          console.log("[Dashboard] Ignoring message from removed pi:", piName);
-          return;
-        }
-
-        setPiSystems((prev) => {
-          const updated = new Map(prev);
-          const existing = updated.get(piName) || {
-            name: piName,
-            status: null,
-            logs: [],
-            lastSeen: null,
-            isConnected: false,
-          };
-
-          const newLogs = [...existing.logs, logMsg].slice(-100);
-          updated.set(piName, {
-            ...existing,
-            logs: newLogs,
-            lastSeen: new Date(),
-            isConnected: true,
-          });
-
-          return updated;
-        });
-      } catch (error) {
-        console.error("[Dashboard] Failed to decode log message:", error);
+      if (baseMessage.type !== StatusType.LOG_MESSAGE) {
+        console.warn(
+          "[Dashboard] Message is not LOG_MESSAGE, type:",
+          baseMessage.type
+        );
+        return;
       }
-    },
-    []
-  );
 
-  const handleStatsMessage = useCallback(
-    async (payload: Uint8Array) => {
-      try {
-        console.log("[Dashboard] Received message on stats topic, size:", payload.length);
-        const baseMessage = StatusBase.decode(payload);
-        console.log("[Dashboard] Decoded base message, type:", baseMessage.type);
-        
-        if (baseMessage.type !== StatusType.SYSTEM_STATUS) {
-          console.warn("[Dashboard] Message is not SYSTEM_STATUS, type:", baseMessage.type);
-          return;
-        }
+      const logMsg = LogMessage.decode(payload);
+      const piName = logMsg.piName || null;
+      console.log("[Dashboard] Decoded log message from pi:", piName);
 
-        const status = PiStatus.decode(payload);
-        const piName = status.piName || null;
-        console.log("[Dashboard] Decoded status message from pi:", piName);
-        
-        if (!piName) {
-          console.warn("Received SYSTEM_STATUS message without pi_name");
-          return;
-        }
-
-        // Ignore messages from intentionally removed Pi systems
-        if (removedPiSystemsRef.current.has(piName)) {
-          console.log("[Dashboard] Ignoring message from removed pi:", piName);
-          return;
-        }
-
-        setPiSystems((prev) => {
-          const updated = new Map(prev);
-          const existing = updated.get(piName) || {
-            name: piName,
-            status: null,
-            logs: [],
-            lastSeen: null,
-            isConnected: false,
-          };
-
-          updated.set(piName, {
-            ...existing,
-            status,
-            lastSeen: new Date(),
-            isConnected: true,
-          });
-
-          return updated;
-        });
-      } catch (error) {
-        console.error("[Dashboard] Failed to decode stats message:", error);
+      if (!piName) {
+        console.warn("Received LOG_MESSAGE without pi_name");
+        return;
       }
-    },
-    []
-  );
+
+      // Ignore messages from intentionally removed Pi systems
+      if (removedPiSystemsRef.current.has(piName)) {
+        console.log("[Dashboard] Ignoring message from removed pi:", piName);
+        return;
+      }
+
+      setPiSystems((prev) => {
+        const updated = new Map(prev);
+        const existing = updated.get(piName) || {
+          name: piName,
+          status: null,
+          logs: [],
+          lastSeen: null,
+          isConnected: false,
+        };
+
+        const newLogs = [...existing.logs, logMsg].slice(-100);
+        updated.set(piName, {
+          ...existing,
+          logs: newLogs,
+          lastSeen: new Date(),
+          isConnected: true,
+        });
+
+        return updated;
+      });
+    } catch (error) {
+      console.error("[Dashboard] Failed to decode log message:", error);
+    }
+  }, []);
+
+  const handleStatsMessage = useCallback(async (payload: Uint8Array) => {
+    try {
+      console.log(
+        "[Dashboard] Received message on stats topic, size:",
+        payload.length
+      );
+      const baseMessage = StatusBase.decode(payload);
+      console.log("[Dashboard] Decoded base message, type:", baseMessage.type);
+
+      if (baseMessage.type !== StatusType.SYSTEM_STATUS) {
+        console.warn(
+          "[Dashboard] Message is not SYSTEM_STATUS, type:",
+          baseMessage.type
+        );
+        return;
+      }
+
+      const status = PiStatus.decode(payload);
+      const piName = status.piName || null;
+      console.log("[Dashboard] Decoded status message from pi:", piName);
+
+      if (!piName) {
+        console.warn("Received SYSTEM_STATUS message without pi_name");
+        return;
+      }
+
+      // Ignore messages from intentionally removed Pi systems
+      if (removedPiSystemsRef.current.has(piName)) {
+        console.log("[Dashboard] Ignoring message from removed pi:", piName);
+        return;
+      }
+
+      setPiSystems((prev) => {
+        const updated = new Map(prev);
+        const existing = updated.get(piName) || {
+          name: piName,
+          status: null,
+          logs: [],
+          lastSeen: null,
+          isConnected: false,
+        };
+
+        updated.set(piName, {
+          ...existing,
+          status,
+          lastSeen: new Date(),
+          isConnected: true,
+        });
+
+        return updated;
+      });
+    } catch (error) {
+      console.error("[Dashboard] Failed to decode stats message:", error);
+    }
+  }, []);
 
   // Subscribe to both log topic and stats topic (only when connected)
   useEffect(() => {
@@ -196,7 +202,12 @@ export function useMultiPiDashboard() {
     const logTopic = topic;
     const statsTopic = `${topic}/stats`;
 
-    console.log("[Dashboard] Subscribing to topics - logs:", logTopic, "stats:", statsTopic);
+    console.log(
+      "[Dashboard] Subscribing to topics - logs:",
+      logTopic,
+      "stats:",
+      statsTopic
+    );
 
     // Unsubscribe from previous topics if they exist
     if (logSubscriptionRef.current) {
@@ -218,7 +229,9 @@ export function useMultiPiDashboard() {
 
     // Verify connection is still active before subscribing
     if (!client.isConnected()) {
-      console.warn("[Dashboard] Connection not active, will retry when reconnected");
+      console.warn(
+        "[Dashboard] Connection not active, will retry when reconnected"
+      );
       return;
     }
 

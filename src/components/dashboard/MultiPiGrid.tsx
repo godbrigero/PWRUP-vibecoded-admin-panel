@@ -253,6 +253,41 @@ export function MultiPiGrid({ piSystems, onClearLogs }: MultiPiGridProps) {
                           />
                         </div>
                       </div>
+
+                      <div className="bg-gray-700 p-4 rounded">
+                        <h4 className="text-sm font-medium text-purple-400 mb-3">
+                          Ports in Use
+                        </h4>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-400">Open Ports:</span>
+                          <span className="font-mono font-bold text-purple-300">
+                            {piData.status?.portsInUse?.length || 0}
+                          </span>
+                        </div>
+                        {piData.status?.portsInUse?.length ? (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {piData.status.portsInUse
+                              .slice(0, 24)
+                              .map((port, idx) => (
+                                <span
+                                  key={`${port}-${idx}`}
+                                  className="px-2 py-1 text-xs font-mono rounded border border-gray-600 bg-gray-800 text-gray-200"
+                                >
+                                  {port}
+                                </span>
+                              ))}
+                            {piData.status.portsInUse.length > 24 ? (
+                              <span className="px-2 py-1 text-xs font-mono rounded border border-gray-600 bg-gray-800 text-gray-400">
+                                +{piData.status.portsInUse.length - 24} more
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="text-gray-400 text-sm mt-3">
+                            None reported
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 

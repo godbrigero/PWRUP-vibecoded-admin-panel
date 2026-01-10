@@ -71,6 +71,36 @@ export function PiDetails({ pi, onClearLogs }: PiDetailsProps) {
           </div>
           <ProgressBar value={status?.diskUsage || 0} color="yellow" />
         </div>
+        <div className="space-y-2 bg-gray-700 p-4 rounded mt-4">
+          <h4 className="text-sm font-medium text-purple-400 mb-1">
+            Ports in Use
+          </h4>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Open Ports:</span>
+            <span className="font-mono font-bold text-purple-300">
+              {status?.portsInUse?.length || 0}
+            </span>
+          </div>
+          {status?.portsInUse?.length ? (
+            <div className="flex flex-wrap gap-2">
+              {status.portsInUse.slice(0, 24).map((port, idx) => (
+                <span
+                  key={`${port}-${idx}`}
+                  className="px-2 py-1 text-xs font-mono rounded border border-gray-600 bg-gray-800 text-gray-200"
+                >
+                  {port}
+                </span>
+              ))}
+              {status.portsInUse.length > 24 ? (
+                <span className="px-2 py-1 text-xs font-mono rounded border border-gray-600 bg-gray-800 text-gray-400">
+                  +{status.portsInUse.length - 24} more
+                </span>
+              ) : null}
+            </div>
+          ) : (
+            <div className="text-gray-400 text-sm">None reported</div>
+          )}
+        </div>
       </div>
       <div>
         <h3 className="text-lg font-semibold text-red-400 mb-4">
