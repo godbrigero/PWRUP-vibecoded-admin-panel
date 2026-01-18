@@ -58,6 +58,14 @@ export default function Home() {
               Open Dashboard
             </Link>
             <Link
+              href="/robot-controls"
+              aria-label="Open Robot Controlls"
+              className="cursor-pointer inline-flex items-center justify-center rounded-lg border border-amber-500 text-amber-800 dark:text-amber-300 px-4 py-2 font-medium hover:bg-amber-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 dark:focus:ring-offset-gray-900 transition-colors"
+            >
+              <span className="mr-2">🤖</span>
+              Robot Controlls
+            </Link>
+            <Link
               href="/settings"
               aria-label="Open Connection Settings"
               className="cursor-pointer inline-flex items-center justify-center rounded-lg border border-emerald-600 text-emerald-700 dark:text-emerald-300 px-4 py-2 font-medium hover:bg-emerald-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600 dark:focus:ring-offset-gray-900 transition-colors"

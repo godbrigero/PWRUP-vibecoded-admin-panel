@@ -28,12 +28,6 @@ export function PingStatus({ piNames }: PingStatusProps) {
   const [testPiName, setTestPiName] = useState<string | null>(null);
   const [testSeries, setTestSeries] = useState<PingTestPoint[] | null>(null);
 
-  const sortedResults = useMemo(() => {
-    return Array.from(pingResults.values()).sort((a, b) =>
-      a.piName.localeCompare(b.piName)
-    );
-  }, [pingResults]);
-
   const testStats = useMemo(() => {
     if (!testSeries) return null;
     const valid = testSeries
@@ -233,10 +227,13 @@ export function PingStatus({ piNames }: PingStatusProps) {
                     borderRadius: "6px",
                     color: "#f3f4f6",
                   }}
-                  formatter={(value: number | null) => [
-                    value === null ? "timeout" : `${Math.round(value)}ms`,
-                    "Ping",
-                  ]}
+                  formatter={(value) => {
+                    const n = typeof value === "number" ? value : null;
+                    return [
+                      n === null ? "timeout" : `${Math.round(n)}ms`,
+                      "Ping",
+                    ];
+                  }}
                   labelFormatter={(label) => `#${label}`}
                 />
                 <Area

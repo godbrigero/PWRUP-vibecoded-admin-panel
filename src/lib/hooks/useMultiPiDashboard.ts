@@ -213,7 +213,7 @@ export function useMultiPiDashboard() {
     if (logSubscriptionRef.current) {
       try {
         client.unsubscribe(logSubscriptionRef.current);
-      } catch (e) {
+      } catch {
         // Ignore unsubscribe errors
       }
       logSubscriptionRef.current = null;
@@ -221,7 +221,7 @@ export function useMultiPiDashboard() {
     if (statsSubscriptionRef.current) {
       try {
         client.unsubscribe(statsSubscriptionRef.current);
-      } catch (e) {
+      } catch {
         // Ignore unsubscribe errors
       }
       statsSubscriptionRef.current = null;
@@ -261,7 +261,7 @@ export function useMultiPiDashboard() {
       if (logSubscriptionRef.current) {
         try {
           client.unsubscribe(logSubscriptionRef.current);
-        } catch (e) {
+        } catch {
           // Ignore unsubscribe errors
         }
         logSubscriptionRef.current = null;
@@ -269,7 +269,7 @@ export function useMultiPiDashboard() {
       if (statsSubscriptionRef.current) {
         try {
           client.unsubscribe(statsSubscriptionRef.current);
-        } catch (e) {
+        } catch {
           // Ignore unsubscribe errors
         }
         statsSubscriptionRef.current = null;
