@@ -20,6 +20,34 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Docker
+
+Build and run the production container:
+
+```bash
+docker build -t blitz-renderer .
+docker run -d --rm -p 7070:7070 --name blitz-renderer blitz-renderer
+```
+
+The `-d` flag runs the container in detached mode (background), so you can continue using your terminal.
+
+To stop the container:
+```bash
+docker stop blitz-renderer
+```
+
+To view logs:
+```bash
+docker logs blitz-renderer
+```
+
+Or with Compose (also runs in detached mode):
+```bash
+docker compose up -d --build
+```
+
+Access the app at [http://localhost:7070](http://localhost:7070)
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
