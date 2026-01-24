@@ -1,4 +1,6 @@
 // src/lib/hooks/usePing.ts - Purpose: ping/pong latency measurement for Pi systems
+"use client";
+
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { Address, AutobahnClient } from "autobahn-client";
 import { Ping, Pong } from "@/generated/status/PiStatus";

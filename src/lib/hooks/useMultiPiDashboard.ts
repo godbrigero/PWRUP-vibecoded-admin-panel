@@ -1,4 +1,6 @@
 // src/lib/hooks/useMultiPiDashboard.ts - Purpose: manage multiple Pi subscriptions and aggregate stats
+"use client";
+
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { Address, AutobahnClient } from "autobahn-client";
 import {

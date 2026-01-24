@@ -30,7 +30,7 @@ type HostConfigHistory = {
 type HostConfigHistoryMap = Record<string, HostConfigHistory>;
 
 function loadHostsFromStorage(): string[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined" || typeof window.localStorage?.getItem !== "function") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -46,7 +46,7 @@ function loadHostsFromStorage(): string[] {
 }
 
 function saveHostsToStorage(hosts: string[]): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || typeof window.localStorage?.setItem !== "function") return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(hosts));
   } catch {
@@ -55,7 +55,7 @@ function saveHostsToStorage(hosts: string[]): void {
 }
 
 function loadConfigHistoryFromStorage(): HostConfigHistoryMap {
-  if (typeof window === "undefined") return {};
+  if (typeof window === "undefined" || typeof window.localStorage?.getItem !== "function") return {};
   try {
     const raw = window.localStorage.getItem(CONFIG_HISTORY_KEY);
     if (!raw) return {};
@@ -84,7 +84,7 @@ function loadConfigHistoryFromStorage(): HostConfigHistoryMap {
 }
 
 function saveConfigHistoryToStorage(history: HostConfigHistoryMap): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || typeof window.localStorage?.setItem !== "function") return;
   try {
     window.localStorage.setItem(CONFIG_HISTORY_KEY, JSON.stringify(history));
   } catch {
