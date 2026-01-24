@@ -1,6 +1,12 @@
 // src/components/dashboard/SystemStatus.tsx - Purpose: detailed single-Pi metrics view
 import { PiStatus } from "@/generated/status/PiStatus";
-import { Card, CardHeader } from "@/components/ui/Card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { formatPercentage, formatBytes } from "@/lib/utils/formatters";
 
@@ -12,22 +18,28 @@ export function SystemStatus({ piStats }: SystemStatusProps) {
   if (!piStats) {
     return (
       <Card>
-        <CardHeader>System Status</CardHeader>
-        <div className="text-gray-400 text-center py-8">
-          Waiting for Pi status data...
-        </div>
+        <CardHeader>
+          <CardTitle>System Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-gray-400 text-center py-8">
+            Waiting for Pi status data...
+          </div>
+        </CardContent>
       </Card>
     );
   }
 
   return (
     <Card>
-      <CardHeader>System Status</CardHeader>
-      <div className="space-y-4">
+      <CardHeader>
+        <CardTitle>System Status</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
         <div>
-          <h3 className="text-lg font-medium text-blue-400">
+          <Badge variant="secondary" className="text-blue-400">
             {piStats.piName || "Unknown Pi"}
-          </h3>
+          </Badge>
         </div>
 
         <div>
@@ -92,7 +104,7 @@ export function SystemStatus({ piStats }: SystemStatusProps) {
             </div>
           </div>
         </div>
-      </div>
+      </CardContent>
     </Card>
   );
 }

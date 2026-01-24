@@ -1,4 +1,11 @@
 // src/components/dashboard/pi/PiDetails.tsx - Purpose: details & processes & terminal for a Pi
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ProgressBar, ProcessChart } from "@/components/ui";
 import { formatPercentage } from "@/lib/utils/formatters";
 import { PiSystemData } from "@/lib/hooks/useMultiPiDashboard";
@@ -13,107 +20,116 @@ export function PiDetails({ pi, onClearLogs }: PiDetailsProps) {
   const status = pi.status;
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-orange-400 mb-4">
-          Detailed Statistics
-        </h3>
-        <div className="space-y-4 bg-gray-700 p-4 rounded">
-          <h4 className="text-sm font-medium text-blue-400 mb-3">
-            CPU Information
-          </h4>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-gray-400">Total Usage:</span>
-              <span className="ml-2 font-mono font-bold text-blue-400">
-                {formatPercentage(status?.cpuUsageTotal || 0)}
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-400">Cores:</span>
-              <span className="ml-2 font-mono">
-                {status?.cpuUsageCores?.length || 0}
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-400">Max Core:</span>
-              <span className="ml-2 font-mono text-red-400">
-                {status?.cpuUsageCores
-                  ? formatPercentage(Math.max(...status.cpuUsageCores))
-                  : "0.0%"}
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-400">Min Core:</span>
-              <span className="ml-2 font-mono text-green-400">
-                {status?.cpuUsageCores
-                  ? formatPercentage(Math.min(...status.cpuUsageCores))
-                  : "0.0%"}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="space-y-2 bg-gray-700 p-4 rounded mt-4">
-          <h4 className="text-sm font-medium text-green-400 mb-1">
-            Storage Information
-          </h4>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Memory Usage:</span>
-            <span className="font-mono font-bold text-green-400">
-              {formatPercentage(status?.memoryUsage || 0)}
-            </span>
-          </div>
-          <ProgressBar value={status?.memoryUsage || 0} color="green" />
-          <div className="flex justify-between mt-3">
-            <span className="text-gray-400">Disk Usage:</span>
-            <span className="font-mono font-bold text-yellow-400">
-              {formatPercentage(status?.diskUsage || 0)}
-            </span>
-          </div>
-          <ProgressBar value={status?.diskUsage || 0} color="yellow" />
-        </div>
-        <div className="space-y-2 bg-gray-700 p-4 rounded mt-4">
-          <h4 className="text-sm font-medium text-purple-400 mb-1">
-            Ports in Use
-          </h4>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-400">Open Ports:</span>
-            <span className="font-mono font-bold text-purple-300">
-              {status?.portsInUse?.length || 0}
-            </span>
-          </div>
-          {status?.portsInUse?.length ? (
-            <div className="flex flex-wrap gap-2">
-              {status.portsInUse.slice(0, 24).map((port, idx) => (
-                <span
-                  key={`${port}-${idx}`}
-                  className="px-2 py-1 text-xs font-mono rounded border border-gray-600 bg-gray-800 text-gray-200"
-                >
-                  {port}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-orange-400">Detailed Statistics</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-muted/50 p-4 rounded-lg">
+            <h4 className="text-sm font-medium text-blue-400 mb-3">
+              CPU Information
+            </h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Total Usage:</span>
+                <span className="ml-2 font-mono font-bold text-blue-400">
+                  {formatPercentage(status?.cpuUsageTotal || 0)}
                 </span>
-              ))}
-              {status.portsInUse.length > 24 ? (
-                <span className="px-2 py-1 text-xs font-mono rounded border border-gray-600 bg-gray-800 text-gray-400">
-                  +{status.portsInUse.length - 24} more
+              </div>
+              <div>
+                <span className="text-muted-foreground">Cores:</span>
+                <span className="ml-2 font-mono">
+                  {status?.cpuUsageCores?.length || 0}
                 </span>
-              ) : null}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Max Core:</span>
+                <span className="ml-2 font-mono text-red-400">
+                  {status?.cpuUsageCores
+                    ? formatPercentage(Math.max(...status.cpuUsageCores))
+                    : "0.0%"}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Min Core:</span>
+                <span className="ml-2 font-mono text-green-400">
+                  {status?.cpuUsageCores
+                    ? formatPercentage(Math.min(...status.cpuUsageCores))
+                    : "0.0%"}
+                </span>
+              </div>
             </div>
+          </div>
+
+          <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+            <h4 className="text-sm font-medium text-green-400 mb-1">
+              Storage Information
+            </h4>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Memory Usage:</span>
+              <span className="font-mono font-bold text-green-400">
+                {formatPercentage(status?.memoryUsage || 0)}
+              </span>
+            </div>
+            <ProgressBar value={status?.memoryUsage || 0} color="green" />
+            <div className="flex justify-between mt-3">
+              <span className="text-muted-foreground">Disk Usage:</span>
+              <span className="font-mono font-bold text-yellow-400">
+                {formatPercentage(status?.diskUsage || 0)}
+              </span>
+            </div>
+            <ProgressBar value={status?.diskUsage || 0} color="yellow" />
+          </div>
+
+          <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+            <h4 className="text-sm font-medium text-purple-400 mb-1">
+              Ports in Use
+            </h4>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Open Ports:</span>
+              <span className="font-mono font-bold text-purple-300">
+                {status?.portsInUse?.length || 0}
+              </span>
+            </div>
+            {status?.portsInUse?.length ? (
+              <div className="flex flex-wrap gap-2">
+                {status.portsInUse.slice(0, 24).map((port, idx) => (
+                  <Badge
+                    key={`${port}-${idx}`}
+                    variant="outline"
+                    className="font-mono text-xs"
+                  >
+                    {port}
+                  </Badge>
+                ))}
+                {status.portsInUse.length > 24 ? (
+                  <Badge variant="secondary" className="font-mono text-xs">
+                    +{status.portsInUse.length - 24} more
+                  </Badge>
+                ) : null}
+              </div>
+            ) : (
+              <div className="text-muted-foreground text-sm">None reported</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-red-400">Top Processes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {status?.top10Processes && status.top10Processes.length > 0 ? (
+            <ProcessChart processes={status.top10Processes} />
           ) : (
-            <div className="text-gray-400 text-sm">None reported</div>
+            <div className="h-48 flex items-center justify-center bg-muted/50 rounded-lg">
+              <span className="text-muted-foreground">No process data available</span>
+            </div>
           )}
-        </div>
-      </div>
-      <div>
-        <h3 className="text-lg font-semibold text-red-400 mb-4">
-          Top Processes
-        </h3>
-        {status?.top10Processes && status.top10Processes.length > 0 ? (
-          <ProcessChart processes={status.top10Processes} />
-        ) : (
-          <div className="h-48 flex items-center justify-center bg-gray-700 rounded">
-            <span className="text-gray-400">No process data available</span>
-          </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
+
       <Terminal
         messages={pi.logs.slice(-100)}
         onClear={() => onClearLogs(pi.name)}

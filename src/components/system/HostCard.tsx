@@ -1,8 +1,20 @@
-// src/components/system/HostCard.tsx - Purpose: clean, uncluttered host card with compact process management
 "use client";
 
 import React from "react";
-import { Card, CardHeader } from "@/components/ui/Card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardAction,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Collapsible,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
 import { PingChartModal } from "./PingChartModal";
 
 export interface PingDataPoint {
@@ -58,13 +70,12 @@ export function HostCard({
     new Set()
   );
 
-  // Continuous refresh when ping chart is open
   React.useEffect(() => {
     if (!showPingChart) return;
 
     const interval = setInterval(() => {
       onRefresh();
-    }, 1000); // Refresh every second
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [showPingChart, onRefresh]);
@@ -97,129 +108,119 @@ export function HostCard({
 
   return (
     <Card className="w-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-sm text-gray-200">{hostUrl}</span>
-            <span className="text-xs text-gray-500">•</span>
-            <span className="text-xs text-gray-400">
-              {status.systemInfo || "—"}
+      <CardHeader>
+        <CardTitle className="flex items-center gap-3 flex-wrap">
+          <span className="font-mono text-sm">{hostUrl}</span>
+          <span className="text-muted-foreground">•</span>
+          <span className="text-sm text-muted-foreground font-normal">
+            {status.systemInfo || "—"}
+          </span>
+          {status.ping !== null && status.ping !== undefined && (
+            <>
+              <span className="text-muted-foreground">•</span>
+              <Button
+                variant="link"
+                size="xs"
+                className="p-0 h-auto"
+                onClick={() => setShowPingChart(true)}
+              >
+                {status.ping}ms
+              </Button>
+            </>
+          )}
+          {status.configSet ? (
+            <Badge className="bg-emerald-900/30 text-emerald-400 border-emerald-700/50">
+              Config Set
+            </Badge>
+          ) : (
+            <Badge variant="destructive" className="bg-red-900/30 text-red-400 border-red-700/50">
+              Config Not Updated
+            </Badge>
+          )}
+          {status.loading && (
+            <span className="text-sm text-muted-foreground animate-pulse">
+              Loading...
             </span>
-            {status.ping !== null && status.ping !== undefined && (
-              <>
-                <span className="text-xs text-gray-500">•</span>
-                <button
-                  type="button"
-                  onClick={() => setShowPingChart(true)}
-                  className="cursor-pointer text-xs text-gray-400 hover:text-blue-400 transition-colors underline"
-                >
-                  {status.ping}ms
-                </button>
-              </>
-            )}
-            {status.configSet ? (
-              <span className="text-xs px-2 py-0.5 bg-emerald-900/30 text-emerald-400 rounded border border-emerald-700/50">
-                Config Set
-              </span>
-            ) : (
-              <span className="text-xs px-2 py-0.5 bg-red-900/30 text-red-400 rounded border border-red-700/50">
-                Config Not Updated
-              </span>
-            )}
-            {status.loading && (
-              <span className="text-xs text-gray-400 animate-pulse">
-                Loading...
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onRefresh}
-              className="cursor-pointer text-xs text-emerald-400 hover:text-emerald-300 px-2 py-1 rounded hover:bg-emerald-900/20 transition-colors"
-            >
-              Refresh
-            </button>
-            <button
-              type="button"
-              onClick={onRemove}
-              className="cursor-pointer text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-900/20 transition-colors"
-            >
-              Remove
-            </button>
-          </div>
-        </div>
+          )}
+        </CardTitle>
+        <CardAction className="flex items-center gap-2">
+          <Button variant="ghost" size="xs" onClick={onRefresh}>
+            Refresh
+          </Button>
+          <Button variant="ghost" size="xs" className="text-destructive hover:text-destructive" onClick={onRemove}>
+            Remove
+          </Button>
+        </CardAction>
       </CardHeader>
 
-      <div className="space-y-3">
+      <CardContent className="space-y-4">
         {status.error && (
-          <div className="text-sm text-red-400 bg-red-900/20 border border-red-700/50 p-2 rounded">
+          <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 p-3 rounded-lg">
             {status.error}
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="xs"
             onClick={() => setShowConfig(!showConfig)}
-            className="cursor-pointer text-xs text-gray-400 hover:text-gray-300 px-2 py-1 rounded hover:bg-gray-900/50 transition-colors"
           >
             {showConfig ? "Hide" : "Set"} Config
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
             onClick={() => {
               setShowSetProcesses(!showSetProcesses);
               if (!showSetProcesses) {
                 setSelectedProcesses(new Set());
               }
             }}
-            className="cursor-pointer text-xs text-gray-400 hover:text-gray-300 px-2 py-1 rounded hover:bg-gray-900/50 transition-colors"
           >
             {showSetProcesses ? "Hide" : "Set"} Processes
-          </button>
+          </Button>
         </div>
 
-        {showConfig && (
-          <div className="space-y-2 p-3 bg-gray-900/50 rounded border border-gray-700/50">
-            <div className="text-xs text-gray-400 mb-1">
+        <Collapsible open={showConfig} onOpenChange={setShowConfig}>
+          <CollapsibleContent className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+            <div className="text-xs text-muted-foreground">
               Base64 Config String
             </div>
-            <textarea
+            <Textarea
               value={configInput}
               onChange={(e) => setConfigInput(e.target.value)}
               placeholder="Paste base64 config string here..."
-              className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm font-mono text-gray-200 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+              className="font-mono"
               rows={3}
             />
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <Button
+                size="sm"
                 onClick={handleSetConfig}
                 disabled={!configInput.trim() || status.loading}
-                className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded text-sm transition-colors"
               >
                 Set Config
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={onRollbackConfig}
                 disabled={!canRollbackConfig || status.loading}
-                className="cursor-pointer text-xs text-amber-400 hover:text-amber-300 disabled:text-gray-500 disabled:cursor-not-allowed px-3 py-1.5 rounded border border-amber-500/40 hover:border-amber-400/70 transition-colors"
               >
                 Use Previous Config
-              </button>
+              </Button>
             </div>
-          </div>
-        )}
+          </CollapsibleContent>
+        </Collapsible>
 
-        {showSetProcesses && (
-          <div className="space-y-2 p-3 bg-gray-900/50 rounded border border-gray-700/50">
-            <div className="text-xs text-gray-400 mb-2">
+        <Collapsible open={showSetProcesses} onOpenChange={setShowSetProcesses}>
+          <CollapsibleContent className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+            <div className="text-xs text-muted-foreground">
               Select processes to set (multiple selection)
             </div>
             {allProcesses.length === 0 ? (
-              <div className="text-sm text-gray-500 text-center py-4">
+              <div className="text-sm text-muted-foreground text-center py-4">
                 No processes available
               </div>
             ) : (
@@ -231,10 +232,10 @@ export function HostCard({
                       key={process}
                       type="button"
                       onClick={() => toggleProcessSelection(process)}
-                      className={`cursor-pointer w-full text-left px-3 py-2 rounded border transition-colors ${
+                      className={`cursor-pointer w-full text-left px-3 py-2 rounded-lg border transition-colors ${
                         isSelected
                           ? "bg-emerald-900/30 border-emerald-700/50 text-emerald-400"
-                          : "bg-gray-800/50 border-gray-700/50 text-gray-200 hover:border-gray-600"
+                          : "bg-background border-border hover:border-muted-foreground"
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -242,7 +243,7 @@ export function HostCard({
                           className={`w-4 h-4 rounded border flex items-center justify-center ${
                             isSelected
                               ? "bg-emerald-600 border-emerald-500"
-                              : "border-gray-600"
+                              : "border-muted-foreground"
                           }`}
                         >
                           {isSelected && (
@@ -256,21 +257,20 @@ export function HostCard({
                 })}
               </div>
             )}
-            <button
-              type="button"
+            <Button
+              size="sm"
               onClick={handleSetProcesses}
               disabled={selectedProcesses.size === 0 || status.loading}
-              className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded text-sm transition-colors"
             >
               Set{" "}
               {selectedProcesses.size > 0 ? `${selectedProcesses.size} ` : ""}
               Process{selectedProcesses.size !== 1 ? "es" : ""}
-            </button>
-          </div>
-        )}
+            </Button>
+          </CollapsibleContent>
+        </Collapsible>
 
         {allProcesses.length === 0 ? (
-          <div className="text-sm text-gray-500 text-center py-6">
+          <div className="text-sm text-muted-foreground text-center py-6">
             No processes available
           </div>
         ) : (
@@ -280,40 +280,34 @@ export function HostCard({
               return (
                 <div
                   key={process}
-                  className="flex items-center justify-between px-3 py-2 bg-gray-900/50 rounded border border-gray-700/50 hover:border-gray-600 transition-colors"
+                  className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-lg border hover:border-muted-foreground transition-colors"
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <span className="font-mono text-sm text-gray-200 truncate">
-                      {process}
-                    </span>
+                    <span className="font-mono text-sm truncate">{process}</span>
                     {isActive && (
-                      <span className="flex-shrink-0 text-xs px-2 py-0.5 bg-emerald-900/30 text-emerald-400 rounded border border-emerald-700/50">
+                      <Badge className="bg-emerald-900/30 text-emerald-400 border-emerald-700/50">
                         Running
-                      </span>
+                      </Badge>
                     )}
                   </div>
-                  <button
-                    type="button"
+                  <Button
+                    variant={isActive ? "destructive" : "default"}
+                    size="xs"
                     onClick={() =>
                       isActive
                         ? onStopProcess([process])
                         : onStartProcess([process])
                     }
                     disabled={status.loading}
-                    className={`cursor-pointer text-xs px-3 py-1 rounded font-medium transition-colors flex-shrink-0 ${
-                      isActive
-                        ? "bg-red-600 hover:bg-red-500 text-white"
-                        : "bg-blue-600 hover:bg-blue-500 text-white"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {isActive ? "Stop" : "Start"}
-                  </button>
+                  </Button>
                 </div>
               );
             })}
           </div>
         )}
-      </div>
+      </CardContent>
 
       <PingChartModal
         isOpen={showPingChart}

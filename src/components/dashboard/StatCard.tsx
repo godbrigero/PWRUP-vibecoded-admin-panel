@@ -1,4 +1,6 @@
 // src/components/dashboard/StatCard.tsx - Purpose: individual stat display card
+import { Card, CardContent } from "@/components/ui/card";
+
 interface StatCardProps {
   label: string;
   value: string | number;
@@ -23,20 +25,21 @@ export function StatCard({
   };
 
   return (
-    <div
-      className={`rounded-lg border p-4 transition-all hover:scale-105 ${colorClasses[color]}`}
+    <Card
+      className={`py-4 transition-all hover:scale-105 ${colorClasses[color]}`}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="text-xs text-gray-400 mb-1">{label}</div>
-          <div className="text-2xl font-bold">{value}</div>
-          {subtitle && (
-            <div className="text-xs text-gray-500 mt-1">{subtitle}</div>
-          )}
+      <CardContent className="p-0 px-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="text-xs text-gray-400 mb-1">{label}</div>
+            <div className="text-2xl font-bold">{value}</div>
+            {subtitle && (
+              <div className="text-xs text-gray-500 mt-1">{subtitle}</div>
+            )}
+          </div>
+          {icon && <div className="ml-2">{icon}</div>}
         </div>
-        {icon && <div className="ml-2">{icon}</div>}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
-

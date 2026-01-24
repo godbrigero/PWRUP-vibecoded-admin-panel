@@ -1,13 +1,27 @@
-// src/components/robot-controls/RobotControlsPage.tsx - Purpose: configure publish topics and tune PID/FF live
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { Address, AutobahnClient } from "autobahn-client";
 import { useSettings } from "@/lib/settings";
-import { ConnectionBadge } from "@/components/ConnectionBadge";
-import { Card, CardHeader } from "@/components/ui/Card";
 import { PIDFFUpdateMessage } from "@/generated/status/Frontend";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
 
 type PidGains = {
   p: number;
@@ -34,17 +48,13 @@ export function RobotControlsPage() {
   );
 
   const [isConnected, setIsConnected] = useState(false);
-
-  // “Publishing topic questions”
   const [pidPublishTopic, setPidPublishTopic] = useState<string>("");
-
   const [gains, setGains] = useState<PidGains>({
     p: 0,
     i: 0,
     d: 0,
     ff: 0,
   });
-
   const [publishMode, setPublishMode] = useState<"apply" | "live">("apply");
   const [lastPublish, setLastPublish] = useState<{
     atMs: number;
@@ -53,8 +63,8 @@ export function RobotControlsPage() {
     ok: boolean;
     message?: string;
   } | null>(null);
+  const [isPidOpen, setIsPidOpen] = useState(true);
 
-  // Best-effort connect + connection-state polling (kept simple on purpose).
   useEffect(() => {
     let cancelled = false;
 
@@ -131,7 +141,6 @@ export function RobotControlsPage() {
     }
   }, [client, gains, pidPublishTopic]);
 
-  // Live publish mode (small debounce to avoid spamming).
   useEffect(() => {
     if (publishMode !== "live") return;
     if (!canPublish) return;
@@ -144,100 +153,89 @@ export function RobotControlsPage() {
   }, [canPublish, gains, publishMode, publishPid]);
 
   return (
-    <main className="min-h-screen text-white">
-      <div className="max-w-6xl mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="text-sm text-gray-300 hover:text-white underline cursor-pointer"
-            >
-              Back
-            </Link>
-            <h1 className="text-2xl font-bold">Robot Controlls</h1>
-          </div>
-          <ConnectionBadge />
-        </div>
-
-        <Card>
-          <CardHeader>Publishing setup</CardHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-300 mb-1">
-                PID publish topic (required)
-              </label>
-              <input
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Publishing Setup</CardTitle>
+          <CardDescription>
+            Configure the topic and mode for publishing PID gains
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="pid-topic">PID publish topic</Label>
+              <Input
+                id="pid-topic"
                 type="text"
-                className="bg-gray-900 border border-gray-700 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                 placeholder='e.g. "robot/control/pid/set"'
                 value={pidPublishTopic}
                 onChange={(e) => setPidPublishTopic(e.target.value)}
+                className="font-mono"
               />
-              <div className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-muted-foreground">
                 Payload is protobuf bytes:{" "}
-                <span className="font-mono text-gray-300">
+                <code className="text-foreground">
                   PIDFFUpdateMessage {"{ p, i, d, ff }"}
-                </span>
-              </div>
+                </code>
+              </p>
             </div>
 
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-300 mb-1">Publish mode</label>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
+            <div className="space-y-2">
+              <Label>Publish mode</Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={publishMode === "apply" ? "default" : "outline"}
                   onClick={() => setPublishMode("apply")}
-                  className={`cursor-pointer px-3 py-2 rounded border ${
-                    publishMode === "apply"
-                      ? "border-emerald-500 bg-emerald-600 text-white"
-                      : "border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800"
-                  }`}
                 >
                   Apply button
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant={publishMode === "live" ? "default" : "outline"}
                   onClick={() => setPublishMode("live")}
-                  className={`cursor-pointer px-3 py-2 rounded border ${
-                    publishMode === "live"
-                      ? "border-emerald-500 bg-emerald-600 text-white"
-                      : "border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800"
-                  }`}
                 >
                   Live publish
-                </button>
+                </Button>
               </div>
-              <div className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-muted-foreground">
                 Connected to {settings.host}:{settings.port} •{" "}
                 {isConnected ? (
-                  <span className="text-emerald-400">connected</span>
+                  <Badge variant="default" className="ml-1">
+                    connected
+                  </Badge>
                 ) : (
-                  <span className="text-gray-400">disconnected</span>
+                  <Badge variant="secondary" className="ml-1">
+                    disconnected
+                  </Badge>
                 )}
-              </div>
+              </p>
             </div>
           </div>
-        </Card>
+        </CardContent>
+      </Card>
 
-        <div className="space-y-4">
-          <details
-            className="bg-gray-800 rounded-lg border border-gray-700"
-            open
-          >
-            <summary className="cursor-pointer select-none px-6 py-4 font-semibold">
-              PID tuning (P / I / D / FF)
-            </summary>
-            <div className="px-6 pb-6 space-y-4">
-              <div className="text-sm text-gray-300">
-                Adjust gains independently, then{" "}
-                {publishMode === "apply" ? (
-                  <span className="text-gray-200">click Apply</span>
-                ) : (
-                  <span className="text-gray-200">they auto-publish</span>
-                )}
-                .
+      <Collapsible open={isPidOpen} onOpenChange={setIsPidOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer select-none">
+              <div className="flex items-center justify-between">
+                <CardTitle>PID Tuning (P / I / D / FF)</CardTitle>
+                <ChevronDown
+                  className={`h-5 w-5 text-muted-foreground transition-transform ${
+                    isPidOpen ? "rotate-180" : ""
+                  }`}
+                />
               </div>
-
+              <CardDescription>
+                Adjust gains independently, then{" "}
+                {publishMode === "apply"
+                  ? "click Apply"
+                  : "they auto-publish"}
+              </CardDescription>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(
                   [
@@ -247,15 +245,16 @@ export function RobotControlsPage() {
                     ["ff", "FF factor"],
                   ] as const
                 ).map(([key, label]) => (
-                  <div key={key} className="bg-gray-900/40 rounded p-4">
+                  <div
+                    key={key}
+                    className="rounded-lg border bg-muted/50 p-4 space-y-3"
+                  >
                     <div className="flex items-center justify-between">
-                      <div className="text-sm text-gray-200 font-medium">
-                        {label}
-                      </div>
-                      <input
+                      <Label>{label}</Label>
+                      <Input
                         type="number"
                         inputMode="decimal"
-                        className="w-28 bg-gray-900 border border-gray-700 rounded px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-sm"
+                        className="w-28 font-mono text-sm"
                         value={String(gains[key])}
                         step={0.001}
                         onChange={(e) => {
@@ -264,66 +263,53 @@ export function RobotControlsPage() {
                         }}
                       />
                     </div>
-                    <input
-                      type="range"
+                    <Slider
                       min={0}
                       max={10}
                       step={0.001}
-                      value={String(clampNumber(gains[key], 0, 10))}
-                      onChange={(e) => {
-                        const n = toNumberOr(e.target.value, gains[key]);
-                        setGains((prev) => ({ ...prev, [key]: n }));
+                      value={[clampNumber(gains[key], 0, 10)]}
+                      onValueChange={([val]) => {
+                        setGains((prev) => ({ ...prev, [key]: val }));
                       }}
-                      className="mt-3 w-full"
                     />
-                    <div className="mt-2 text-xs text-gray-400 font-mono">
+                    <p className="text-xs text-muted-foreground font-mono">
                       {key.toUpperCase()}={gains[key]}
-                    </div>
+                    </p>
                   </div>
                 ))}
               </div>
 
-              {publishMode === "apply" ? (
+              {publishMode === "apply" && (
                 <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => void publishPid()}
-                    disabled={!canPublish}
-                    className={`cursor-pointer px-4 py-2 rounded ${
-                      !canPublish
-                        ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-                        : "bg-emerald-600 hover:bg-emerald-500 text-white"
-                    }`}
-                  >
+                  <Button onClick={() => void publishPid()} disabled={!canPublish}>
                     Apply
-                  </button>
-                  {!pidPublishTopic.trim() ? (
-                    <span className="text-xs text-gray-400">
+                  </Button>
+                  {!pidPublishTopic.trim() && (
+                    <span className="text-xs text-muted-foreground">
                       Provide a publish topic to enable Apply.
                     </span>
-                  ) : null}
+                  )}
                 </div>
-              ) : null}
+              )}
 
-              {lastPublish ? (
+              {lastPublish && (
                 <div
-                  className={`text-xs rounded border px-3 py-2 font-mono ${
+                  className={`text-xs rounded-md border px-3 py-2 font-mono ${
                     lastPublish.ok
-                      ? "border-emerald-700 bg-emerald-900/20 text-emerald-300"
-                      : "border-red-700 bg-red-900/20 text-red-300"
+                      ? "border-green-600 bg-green-900/20 text-green-400"
+                      : "border-red-600 bg-red-900/20 text-red-400"
                   }`}
                 >
                   {lastPublish.ok ? "Published" : "Publish failed"} • topic=
-                  <span className="text-gray-100">{lastPublish.topic}</span> •
+                  <span className="text-foreground">{lastPublish.topic}</span> •
                   bytes={lastPublish.bytes}
                   {lastPublish.message ? ` • ${lastPublish.message}` : ""}
                 </div>
-              ) : null}
-            </div>
-          </details>
-        </div>
-      </div>
-    </main>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+    </div>
   );
 }
-

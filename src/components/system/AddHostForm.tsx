@@ -1,8 +1,10 @@
-// src/components/system/AddHostForm.tsx - Purpose: form to add new watchdog host
 "use client";
 
 import React from "react";
-import { Card, CardHeader } from "@/components/ui/Card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 interface AddHostFormProps {
   onAdd: (url: string) => void;
@@ -27,39 +29,38 @@ export function AddHostForm({ onAdd, defaultPort = 5000 }: AddHostFormProps) {
 
   return (
     <Card>
-      <CardHeader>Add Host</CardHeader>
-      <form onSubmit={handleSubmit} className="flex items-end gap-3">
-        <div className="flex-1">
-          <label className="text-sm text-gray-300 mb-1 block">Host</label>
-          <input
-            type="text"
-            className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
-            placeholder="10.47.65.7"
-            value={hostInput}
-            onChange={(e) => setHostInput(e.target.value)}
-          />
-        </div>
-        <div className="w-24">
-          <label className="text-sm text-gray-300 mb-1 block">Port</label>
-          <input
-            type="number"
-            className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
-            placeholder="5000"
-            value={portInput}
-            onChange={(e) => setPortInput(e.target.value)}
-            min="1"
-            max="65535"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={!hostInput.trim()}
-          className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-4 py-2 rounded"
-        >
-          Add
-        </button>
-      </form>
+      <CardHeader>
+        <CardTitle>Add Host</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="flex items-end gap-3">
+          <div className="flex-1 space-y-2">
+            <Label htmlFor="host">Host</Label>
+            <Input
+              id="host"
+              type="text"
+              placeholder="10.47.65.7"
+              value={hostInput}
+              onChange={(e) => setHostInput(e.target.value)}
+            />
+          </div>
+          <div className="w-24 space-y-2">
+            <Label htmlFor="port">Port</Label>
+            <Input
+              id="port"
+              type="number"
+              placeholder="5000"
+              value={portInput}
+              onChange={(e) => setPortInput(e.target.value)}
+              min="1"
+              max="65535"
+            />
+          </div>
+          <Button type="submit" disabled={!hostInput.trim()}>
+            Add
+          </Button>
+        </form>
+      </CardContent>
     </Card>
   );
 }
-

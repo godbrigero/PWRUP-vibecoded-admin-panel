@@ -4,8 +4,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Log Viewer",
-  description: "Log Viewer",
+  title: "PWRUP Admin",
+  description: "Raspberry Pi Fleet Control Panel",
 };
 
 export default function RootLayout({
@@ -14,8 +14,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`antialiased bg-gray-900`}>
+    <html lang="en" className="dark">
+      <body className="antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

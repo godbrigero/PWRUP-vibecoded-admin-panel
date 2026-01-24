@@ -1,46 +1,57 @@
 // src/components/dashboard/pi/PiHeader.tsx - Purpose: clickable card header for a Pi
-import { CardHeader } from "@/components/ui/Card";
+import { CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ChevronDown } from "lucide-react";
 import { formatPercentage } from "@/lib/utils/formatters";
 import { PiSystemData } from "@/lib/hooks/useMultiPiDashboard";
+import { forwardRef } from "react";
 
 interface PiHeaderProps {
   pi: PiSystemData;
   isExpanded: boolean;
-  onClick: () => void;
 }
 
-export function PiHeader({ pi, isExpanded, onClick }: PiHeaderProps) {
-  return (
-    <div
-      className="cursor-pointer hover:bg-gray-700/50 transition-colors duration-200 -m-6 p-6"
-      onClick={onClick}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <CardHeader className="mb-0">
-            {pi.name}
-            <span className="text-sm text-green-400 ml-2">●</span>
-          </CardHeader>
-          <div className="flex space-x-4 text-sm">
-            <span className="text-blue-400">
-              CPU: {formatPercentage(pi.status?.cpuUsageTotal || 0)}
-            </span>
-            <span className="text-green-400">
-              RAM: {formatPercentage(pi.status?.memoryUsage || 0)}
-            </span>
-            <span className="text-yellow-400">
-              Disk: {formatPercentage(pi.status?.diskUsage || 0)}
-            </span>
+export const PiHeader = forwardRef<HTMLButtonElement, PiHeaderProps>(
+  ({ pi, isExpanded, ...props }, ref) => {
+    return (
+      <Button
+        ref={ref}
+        variant="ghost"
+        className="w-full h-auto p-0 hover:bg-accent/50"
+        {...props}
+      >
+        <CardHeader className="w-full">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              <CardTitle className="flex items-center gap-2">
+                {pi.name}
+                <Badge variant="default" className="bg-green-500 text-white">
+                  ●
+                </Badge>
+              </CardTitle>
+              <div className="flex gap-3 text-sm">
+                <Badge variant="outline" className="text-blue-400 border-blue-400/50">
+                  CPU: {formatPercentage(pi.status?.cpuUsageTotal || 0)}
+                </Badge>
+                <Badge variant="outline" className="text-green-400 border-green-400/50">
+                  RAM: {formatPercentage(pi.status?.memoryUsage || 0)}
+                </Badge>
+                <Badge variant="outline" className="text-yellow-400 border-yellow-400/50">
+                  Disk: {formatPercentage(pi.status?.diskUsage || 0)}
+                </Badge>
+              </div>
+            </div>
+            <ChevronDown
+              className={`h-4 w-4 transition-transform duration-200 ${
+                isExpanded ? "rotate-180" : ""
+              }`}
+            />
           </div>
-        </div>
-        <div
-          className={`transform transition-transform duration-200 ${
-            isExpanded ? "rotate-180" : ""
-          }`}
-        >
-          ▼
-        </div>
-      </div>
-    </div>
-  );
-}
+        </CardHeader>
+      </Button>
+    );
+  }
+);
+
+PiHeader.displayName = "PiHeader";
