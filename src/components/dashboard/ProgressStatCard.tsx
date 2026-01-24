@@ -1,4 +1,5 @@
 // src/components/dashboard/ProgressStatCard.tsx - Purpose: stat card with progress bar
+import { Card, CardContent } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 
 interface ProgressStatCardProps {
@@ -31,17 +32,18 @@ export function ProgressStatCard({
   };
 
   return (
-    <div
-      className={`rounded-lg border p-4 transition-all hover:scale-105 ${colorClasses[color]}`}
+    <Card
+      className={`py-4 transition-all hover:scale-105 ${colorClasses[color]}`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-xs text-gray-400">{label}</div>
-        <div className={`text-sm font-bold font-mono ${textColors[color]}`}>
-          {format(value)}
+      <CardContent className="p-0 px-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs text-gray-400">{label}</div>
+          <div className={`text-sm font-bold font-mono ${textColors[color]}`}>
+            {format(value)}
+          </div>
         </div>
-      </div>
-      <ProgressBar value={value} color={color} />
-    </div>
+        <ProgressBar value={value} color={color} />
+      </CardContent>
+    </Card>
   );
 }
-

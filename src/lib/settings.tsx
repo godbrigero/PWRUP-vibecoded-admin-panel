@@ -33,7 +33,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // Load from localStorage once on mount (client-side only)
   useEffect(() => {
     try {
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && typeof window.localStorage?.getItem === "function") {
         const raw = window.localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw) as Partial<ConnectionSettings>;
@@ -58,7 +58,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const setSettings = useCallback((next: ConnectionSettings) => {
     setSettingsState(next);
     try {
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && typeof window.localStorage?.setItem === "function") {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       }
     } catch {

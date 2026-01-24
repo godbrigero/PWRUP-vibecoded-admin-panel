@@ -1,6 +1,11 @@
-// src/app/dashboard/page.tsx - Purpose: page wrapper for DashboardPage component
-import { DashboardPage } from "@/components/dashboard/DashboardPage";
+// src/app/dashboard/page.tsx - Purpose: combined dashboard with Pi monitoring and System Management
+import { CombinedDashboard } from "@/components/dashboard/CombinedDashboard";
+import { AppLayout } from "@/components/layout";
 
 export default function Dashboard() {
-  return <DashboardPage />;
+  return (
+    <AppLayout title="Dashboard">
+      <CombinedDashboard />
+    </AppLayout>
+  );
 }

@@ -7,6 +7,7 @@ export { GlobalOverview } from "./GlobalOverview";
 export { PiSystemManager } from "./PiSystemManager";
 export { MultiPiGrid } from "./MultiPiGrid";
 export { DashboardPage } from "./DashboardPage";
+export { CombinedDashboard } from "./CombinedDashboard";
 export { TopicConfig } from "./TopicConfig";
 export { StatCard } from "./StatCard";
 export { ProgressStatCard } from "./ProgressStatCard";

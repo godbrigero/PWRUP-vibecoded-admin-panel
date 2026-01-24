@@ -1,7 +1,10 @@
 // src/components/dashboard/TopicConfig.tsx - Purpose: topic subscription configuration
 "use client";
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 interface TopicConfigProps {
   topic: string;
@@ -29,55 +32,61 @@ export function TopicConfig({ topic, onTopicChange }: TopicConfigProps) {
   };
 
   return (
-    <Card className="bg-gradient-to-r from-gray-800 to-gray-750 border border-gray-700">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <div className="text-xs text-gray-400 mb-1">Subscription Topics</div>
-          {isEditing ? (
-            <input
-              type="text"
-              value={topicInput}
-              onChange={(e) => setTopicInput(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter") handleSave();
-                if (e.key === "Escape") handleCancel();
-              }}
-              className="w-full px-3 py-2 bg-gray-900 text-white rounded border border-emerald-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-mono text-sm"
-              autoFocus
-            />
-          ) : (
-            <div className="space-y-1">
-              <div
-                onClick={() => setIsEditing(true)}
-                className="cursor-pointer px-3 py-2 bg-gray-900/50 rounded border border-gray-700 hover:border-emerald-500/50 transition-colors font-mono text-sm text-emerald-400"
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Subscription Topics</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            {isEditing ? (
+              <div className="space-y-2">
+                <Label htmlFor="topic-input">Topic</Label>
+                <Input
+                  id="topic-input"
+                  type="text"
+                  value={topicInput}
+                  onChange={(e) => setTopicInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSave();
+                    if (e.key === "Escape") handleCancel();
+                  }}
+                  className="font-mono"
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="cursor-pointer text-left w-full px-3 py-2 rounded-md border bg-muted/50 hover:bg-muted font-mono text-sm transition-colors"
+                >
+                  {topic}
+                </button>
+                <p className="text-xs text-muted-foreground px-1">
+                  Logs: <code className="font-mono">{topic}</code> • Stats:{" "}
+                  <code className="font-mono">{topic}/stats</code>
+                </p>
+              </div>
+            )}
+          </div>
+          {isEditing && (
+            <div className="flex gap-2">
+              <Button
+                onClick={handleSave}
+                disabled={!topicInput.trim() || topicInput.trim() === topic}
+                size="sm"
               >
-                {topic}
-              </div>
-              <div className="text-xs text-gray-500 px-3">
-                Logs: <span className="font-mono text-gray-400">{topic}</span> • Stats: <span className="font-mono text-gray-400">{topic}/stats</span>
-              </div>
+                Save
+              </Button>
+              <Button onClick={handleCancel} variant="outline" size="sm">
+                Cancel
+              </Button>
             </div>
           )}
         </div>
-        {isEditing && (
-          <div className="flex gap-2 ml-3">
-            <button
-              onClick={handleSave}
-              disabled={!topicInput.trim() || topicInput.trim() === topic}
-              className="cursor-pointer px-3 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded text-sm transition-colors"
-            >
-              Save
-            </button>
-            <button
-              onClick={handleCancel}
-              className="cursor-pointer px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-      </div>
+      </CardContent>
     </Card>
   );
 }
-

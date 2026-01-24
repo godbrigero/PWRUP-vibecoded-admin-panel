@@ -1,5 +1,5 @@
 // src/components/dashboard/MultiPiGridLite.tsx - Purpose: lightweight grid of Pi cards
-import { Card, CardHeader } from "@/components/ui/Card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { PiSystemData } from "@/lib/hooks/useMultiPiDashboard";
 import { useMemo } from "react";
 import { PiCard } from "@/components/dashboard/pi/PiCard";

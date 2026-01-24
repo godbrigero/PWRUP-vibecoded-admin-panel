@@ -1,7 +1,15 @@
 // src/components/dashboard/PingStatus.tsx - Purpose: ping/pong latency display and controls
 "use client";
 import { usePing } from "@/lib/hooks/usePing";
-import { Card } from "@/components/ui/Card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useMemo, useState, useCallback } from "react";
 import {
   AreaChart,
@@ -23,7 +31,8 @@ type PingTestPoint = {
 };
 
 export function PingStatus({ piNames }: PingStatusProps) {
-  const { pingResults, sendPing, pingAll, isConnected, runPingTest } = usePing();
+  const { pingResults, sendPing, pingAll, isConnected, runPingTest } =
+    usePing();
   const [isTesting, setIsTesting] = useState(false);
   const [testPiName, setTestPiName] = useState<string | null>(null);
   const [testSeries, setTestSeries] = useState<PingTestPoint[] | null>(null);
@@ -34,7 +43,13 @@ export function PingStatus({ piNames }: PingStatusProps) {
       .map((p) => p.ping)
       .filter((x): x is number => typeof x === "number");
     if (valid.length === 0) {
-      return { count: testSeries.length, ok: 0, avg: null, min: null, max: null };
+      return {
+        count: testSeries.length,
+        ok: 0,
+        avg: null,
+        min: null,
+        max: null,
+      };
     }
     const sum = valid.reduce((a, b) => a + b, 0);
     return {
@@ -82,179 +97,190 @@ export function PingStatus({ piNames }: PingStatusProps) {
     return "Poor";
   };
 
+  const getLatencyBadgeClass = (latency: number) => {
+    if (latency < 50)
+      return "bg-emerald-900/30 text-emerald-400 border-emerald-700/50";
+    if (latency < 100)
+      return "bg-yellow-900/30 text-yellow-400 border-yellow-700/50";
+    if (latency < 200)
+      return "bg-orange-900/30 text-orange-400 border-orange-700/50";
+    return "bg-red-900/30 text-red-400 border-red-700/50";
+  };
+
   return (
-    <Card className="bg-gradient-to-br from-gray-800 to-gray-850 border border-gray-700">
-      <div className="flex items-center justify-between mb-4">
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-gray-200">Ping Status</h2>
-          <div className="text-xs text-gray-400 mt-1">
-            Note: this is client-side RTT; real one-way latency is often ~½ of this. JS/TS timing + message handling can inflate spikes.
-          </div>
+          <CardTitle>Ping Status</CardTitle>
+          <CardDescription>
+            Note: this is client-side RTT; real one-way latency is often ~½ of
+            this. JS/TS timing + message handling can inflate spikes.
+          </CardDescription>
         </div>
         <div className="flex gap-2">
-          <button
+          <Button
+            size="sm"
             onClick={() => pingAll(piNames)}
             disabled={!isConnected || piNames.length === 0}
-            className="cursor-pointer px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded text-sm transition-colors font-medium"
           >
             Ping All
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
             onClick={runTest}
             disabled={!isConnected || piNames.length === 0 || isTesting}
-            className="cursor-pointer px-3 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded text-sm transition-colors font-medium"
           >
             {isTesting ? "Testing..." : "Test (20x)"}
-          </button>
+          </Button>
         </div>
-      </div>
+      </CardHeader>
+      <CardContent>
+        {piNames.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No Pi systems to ping. Add systems above to get started.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {piNames.map((piName) => {
+              const result = pingResults.get(piName);
+              const hasResult = result !== undefined;
+              const timeSincePing = result
+                ? Date.now() - result.timestamp.getTime()
+                : null;
 
-      {piNames.length === 0 ? (
-        <div className="text-center py-8 text-gray-400">
-          No Pi systems to ping. Add systems above to get started.
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {piNames.map((piName) => {
-            const result = pingResults.get(piName);
-            const hasResult = result !== undefined;
-            const timeSincePing = result
-              ? Date.now() - result.timestamp.getTime()
-              : null;
-
-            return (
-              <div
-                key={piName}
-                className="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg border border-gray-700 hover:border-emerald-500/50 transition-all"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-gray-200 truncate">
-                      {piName}
+              return (
+                <div
+                  key={piName}
+                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border hover:border-emerald-500/50 transition-all"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold truncate">{piName}</div>
+                      {hasResult && timeSincePing !== null && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {timeSincePing < 1000
+                            ? `Updated ${Math.round(timeSincePing)}ms ago`
+                            : `Updated ${Math.round(timeSincePing / 1000)}s ago`}
+                        </div>
+                      )}
                     </div>
-                    {hasResult && timeSincePing !== null && (
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        {timeSincePing < 1000
-                          ? `Updated ${Math.round(timeSincePing)}ms ago`
-                          : `Updated ${Math.round(timeSincePing / 1000)}s ago`}
+                    {hasResult ? (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div
+                          className={`text-lg font-bold font-mono ${getLatencyColor(
+                            result.latency
+                          )}`}
+                        >
+                          {result.latency.toFixed(0)}ms
+                        </div>
+                        <Badge className={getLatencyBadgeClass(result.latency)}>
+                          {getLatencyLabel(result.latency)}
+                        </Badge>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground flex-shrink-0">
+                        No ping data
                       </div>
                     )}
                   </div>
-                  {hasResult ? (
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <div
-                        className={`text-lg font-bold font-mono ${getLatencyColor(
-                          result.latency
-                        )}`}
-                      >
-                        {result.latency.toFixed(0)}ms
-                      </div>
-                      <div
-                        className={`text-xs px-2 py-0.5 rounded ${
-                          result.latency < 50
-                            ? "bg-emerald-900/30 text-emerald-400 border border-emerald-700/50"
-                            : result.latency < 100
-                            ? "bg-yellow-900/30 text-yellow-400 border border-yellow-700/50"
-                            : result.latency < 200
-                            ? "bg-orange-900/30 text-orange-400 border border-orange-700/50"
-                            : "bg-red-900/30 text-red-400 border border-red-700/50"
-                        }`}
-                      >
-                        {getLatencyLabel(result.latency)}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-500 flex-shrink-0">
-                      No ping data
-                    </div>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => sendPing(piName)}
+                    disabled={!isConnected}
+                    className="ml-3"
+                  >
+                    Ping
+                  </Button>
                 </div>
-                <button
-                  onClick={() => sendPing(piName)}
-                  disabled={!isConnected}
-                  className="cursor-pointer ml-3 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded text-sm transition-colors flex-shrink-0"
-                >
-                  Ping
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
 
-      {testSeries && testPiName ? (
-        <div className="mt-4 pt-4 border-t border-gray-700">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <div className="text-sm font-semibold text-gray-200">
-                Ping Test: {testPiName} (20× @ 50ms)
-              </div>
-              {testStats ? (
-                <div className="text-xs text-gray-400 mt-0.5">
-                  ok {testStats.ok}/{testStats.count}
-                  {testStats.avg !== null
-                    ? ` · avg ${testStats.avg}ms · min ${testStats.min}ms · max ${testStats.max}ms`
-                    : " · no successful samples"}
+        {testSeries && testPiName ? (
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-sm font-semibold">
+                  Ping Test: {testPiName} (20× @ 50ms)
                 </div>
-              ) : null}
+                {testStats ? (
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    ok {testStats.ok}/{testStats.count}
+                    {testStats.avg !== null
+                      ? ` · avg ${testStats.avg}ms · min ${testStats.min}ms · max ${testStats.max}ms`
+                      : " · no successful samples"}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={testSeries}
+                  margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                >
+                  <defs>
+                    <linearGradient
+                      id="pingTestGradient"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis
+                    dataKey="seq"
+                    tick={{ fontSize: 12, fill: "#9ca3af" }}
+                    axisLine={{ stroke: "#4b5563" }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12, fill: "#9ca3af" }}
+                    axisLine={{ stroke: "#4b5563" }}
+                    label={{
+                      value: "ms",
+                      angle: -90,
+                      position: "insideLeft",
+                      fill: "#9ca3af",
+                    }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1f2937",
+                      border: "1px solid #374151",
+                      borderRadius: "6px",
+                      color: "#f3f4f6",
+                    }}
+                    formatter={(value) => {
+                      const n = typeof value === "number" ? value : null;
+                      return [
+                        n === null ? "timeout" : `${Math.round(n)}ms`,
+                        "Ping",
+                      ];
+                    }}
+                    labelFormatter={(label) => `#${label}`}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="ping"
+                    stroke="#a855f7"
+                    fillOpacity={1}
+                    fill="url(#pingTestGradient)"
+                    connectNulls={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
-
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={testSeries} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-                <defs>
-                  <linearGradient id="pingTestGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis
-                  dataKey="seq"
-                  tick={{ fontSize: 12, fill: "#9ca3af" }}
-                  axisLine={{ stroke: "#4b5563" }}
-                />
-                <YAxis
-                  tick={{ fontSize: 12, fill: "#9ca3af" }}
-                  axisLine={{ stroke: "#4b5563" }}
-                  label={{ value: "ms", angle: -90, position: "insideLeft", fill: "#9ca3af" }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1f2937",
-                    border: "1px solid #374151",
-                    borderRadius: "6px",
-                    color: "#f3f4f6",
-                  }}
-                  formatter={(value) => {
-                    const n = typeof value === "number" ? value : null;
-                    return [
-                      n === null ? "timeout" : `${Math.round(n)}ms`,
-                      "Ping",
-                    ];
-                  }}
-                  labelFormatter={(label) => `#${label}`}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="ping"
-                  stroke="#a855f7"
-                  fillOpacity={1}
-                  fill="url(#pingTestGradient)"
-                  connectNulls={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      ) : null}
+        ) : null}
+      </CardContent>
     </Card>
   );
 }
-
-
-
-
-
-

@@ -1,6 +1,13 @@
 // src/components/dashboard/ProcessList.tsx - Purpose: compact list of top processes by CPU
 import { PiProcess } from "@/generated/status/PiStatus";
-import { Card, CardHeader } from "@/components/ui/Card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatPercentage } from "@/lib/utils/formatters";
 
 interface ProcessListProps {
@@ -14,24 +21,34 @@ export function ProcessList({ processes }: ProcessListProps) {
 
   return (
     <Card>
-      <CardHeader>Top Processes</CardHeader>
-      <div className="space-y-2">
-        {processes.map((process, index) => (
-          <div
-            key={`${process.pid}-${index}`}
-            className="flex items-center justify-between text-sm"
-          >
-            <div className="flex items-center space-x-3">
-              <span className="text-gray-400 w-6 text-right">{index + 1}</span>
-              <span className="font-mono">{process.name}</span>
-              <span className="text-gray-400 text-xs">PID: {process.pid}</span>
-            </div>
-            <span className="font-mono text-blue-400">
-              {formatPercentage(process.cpuUsage)}
-            </span>
+      <CardHeader>
+        <CardTitle>Top Processes</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ScrollArea className="h-[200px]">
+          <div className="space-y-2 pr-4">
+            {processes.map((process, index) => (
+              <div
+                key={`${process.pid}-${index}`}
+                className="flex items-center justify-between text-sm"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-gray-400 w-6 text-right">
+                    {index + 1}
+                  </span>
+                  <span className="font-mono">{process.name}</span>
+                  <Badge variant="outline" className="text-xs text-gray-400">
+                    PID: {process.pid}
+                  </Badge>
+                </div>
+                <span className="font-mono text-blue-400">
+                  {formatPercentage(process.cpuUsage)}
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </ScrollArea>
+      </CardContent>
     </Card>
   );
 }
