@@ -32,11 +32,11 @@ async function handleJsonResponse<T>(res: Response): Promise<T> {
 }
 
 export async function getSystemStatus(
-  baseUrl: string
+  baseUrl: string,
 ): Promise<SystemStatusSuccess> {
   // Use Next.js API route as proxy to avoid CORS issues
   const proxyUrl = `/api/watchdog/status?baseUrl=${encodeURIComponent(
-    baseUrl
+    baseUrl,
   )}`;
   const res = await fetch(proxyUrl, {
     method: "GET",
@@ -52,22 +52,22 @@ export async function getSystemStatus(
 
 export async function setConfig(
   baseUrl: string,
-  config: string
+  config_base64: string,
 ): Promise<void> {
   const proxyUrl = `/api/watchdog/config?baseUrl=${encodeURIComponent(
-    baseUrl
+    baseUrl,
   )}`;
   const res = await fetch(proxyUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ config }),
+    body: JSON.stringify({ config_base64 }),
   });
   await handleJsonResponse<{ status: "success" }>(res);
 }
 
 export async function startProcesses(
   baseUrl: string,
-  processTypes: string[]
+  processTypes: string[],
 ): Promise<void> {
   const proxyUrl = `/api/watchdog/start?baseUrl=${encodeURIComponent(baseUrl)}`;
   const res = await fetch(proxyUrl, {
@@ -80,7 +80,7 @@ export async function startProcesses(
 
 export async function stopProcesses(
   baseUrl: string,
-  processTypes: string[]
+  processTypes: string[],
 ): Promise<void> {
   const proxyUrl = `/api/watchdog/stop?baseUrl=${encodeURIComponent(baseUrl)}`;
   const res = await fetch(proxyUrl, {
@@ -93,10 +93,10 @@ export async function stopProcesses(
 
 export async function setProcesses(
   baseUrl: string,
-  processes: string[]
+  processes: string[],
 ): Promise<void> {
   const proxyUrl = `/api/watchdog/set-processes?baseUrl=${encodeURIComponent(
-    baseUrl
+    baseUrl,
   )}`;
   const res = await fetch(proxyUrl, {
     method: "POST",
