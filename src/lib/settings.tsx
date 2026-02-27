@@ -29,6 +29,17 @@ const SettingsContext = createContext<SettingsContextValue | undefined>(
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettingsState] = useState<ConnectionSettings>(DEFAULTS);
+  const [hydrated, setHydrated] = useState(false);
+
+  const persistSettings = useCallback((next: ConnectionSettings) => {
+    try {
+      if (typeof window !== "undefined" && typeof window.localStorage?.setItem === "function") {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      }
+    } catch {
+      // storage might be unavailable
+    }
+  }, []);
 
   // Load from localStorage once on mount (client-side only)
   useEffect(() => {
@@ -52,23 +63,80 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {
       // ignore corrupted storage
+    } finally {
+      setHydrated(true);
     }
   }, []);
 
   const setSettings = useCallback((next: ConnectionSettings) => {
     setSettingsState(next);
-    try {
-      if (typeof window !== "undefined" && typeof window.localStorage?.setItem === "function") {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      }
-    } catch {
-      // storage might be unavailable
-    }
-  }, []);
+    persistSettings(next);
+  }, [persistSettings]);
 
   const resetDefaults = useCallback(() => {
     setSettings(DEFAULTS);
   }, [setSettings]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function autoDiscover() {
+      try {
+        const response = await fetch("/api/discovery/watchdog?timeoutMs=2500", {
+          cache: "no-store",
+        });
+        if (!response.ok || cancelled) {
+          return;
+        }
+
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          found?: boolean;
+          host?: string;
+          port?: number;
+        };
+
+        if (!payload.ok || !payload.found) {
+          return;
+        }
+
+        const host = typeof payload.host === "string" ? payload.host.trim() : "";
+        const port =
+          typeof payload.port === "number" && Number.isFinite(payload.port)
+            ? Math.round(payload.port)
+            : NaN;
+
+        if (!host || !Number.isFinite(port) || port <= 0 || port > 65535) {
+          return;
+        }
+
+        const next: ConnectionSettings = { host, port };
+        if (cancelled) {
+          return;
+        }
+
+        setSettingsState((prev) => {
+          if (prev.host === next.host && prev.port === next.port) {
+            return prev;
+          }
+          return next;
+        });
+        persistSettings(next);
+      } catch {
+        // Ignore discovery failures and keep existing settings.
+      }
+    }
+
+    void autoDiscover();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, persistSettings]);
 
   const value = useMemo<SettingsContextValue>(
     () => ({ settings, setSettings, resetDefaults }),

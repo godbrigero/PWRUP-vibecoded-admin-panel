@@ -10,6 +10,7 @@ import {
   Settings,
   Database,
   Route,
+  Trophy,
 } from "lucide-react";
 
 import {
@@ -30,6 +31,7 @@ const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Robot Controls", href: "/robot-controls", icon: Gamepad2 },
   { title: "Video Feed", href: "/video", icon: Video },
+  { title: "Comp View", href: "/comp", icon: Trophy },
   { title: "Replays", href: "/replays", icon: Database },
   { title: "Paths", href: "/paths", icon: Route },
   { title: "Settings", href: "/settings", icon: Settings },
