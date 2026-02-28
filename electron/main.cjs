@@ -12,6 +12,35 @@ const SERVER_POLL_INTERVAL_MS = 300;
 let mainWindow = null;
 let nextServerProcess = null;
 let packagedServerUrl = null;
+let bundledServerScriptPath = null;
+let bundledServerCwd = null;
+const serverLogBuffer = [];
+const SERVER_LOG_BUFFER_MAX = 120;
+
+function pushServerLog(source, chunk) {
+  const text = String(chunk ?? "").replace(/\r/g, "");
+  if (!text) return;
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    serverLogBuffer.push(`[${source}] ${line}`);
+  }
+  if (serverLogBuffer.length > SERVER_LOG_BUFFER_MAX) {
+    serverLogBuffer.splice(0, serverLogBuffer.length - SERVER_LOG_BUFFER_MAX);
+  }
+}
+
+function getBundledServerDiagnostics() {
+  const lines = [
+    `Server URL: ${packagedServerUrl ?? "(not started)"}`,
+    `Server script: ${bundledServerScriptPath ?? "(unknown)"}`,
+    `Server cwd: ${bundledServerCwd ?? "(unknown)"}`,
+  ];
+  if (serverLogBuffer.length > 0) {
+    lines.push("", "Recent embedded server logs:");
+    lines.push(...serverLogBuffer.slice(-40));
+  }
+  return lines.join("\n");
+}
 
 function getWindowIconPath() {
   if (app.isPackaged) {
@@ -78,6 +107,9 @@ function getOpenPort() {
 async function startBundledNextServer(port) {
   const serverScriptPath = path.join(process.resourcesPath, "app", "server.js");
   const serverCwd = path.dirname(serverScriptPath);
+  bundledServerScriptPath = serverScriptPath;
+  bundledServerCwd = serverCwd;
+  serverLogBuffer.length = 0;
 
   nextServerProcess = spawn(process.execPath, [serverScriptPath], {
     cwd: serverCwd,
@@ -93,24 +125,39 @@ async function startBundledNextServer(port) {
   });
 
   nextServerProcess.stdout.on("data", (data) => {
+    pushServerLog("next:stdout", data);
     process.stdout.write(`[next] ${data}`);
   });
 
   nextServerProcess.stderr.on("data", (data) => {
+    pushServerLog("next:stderr", data);
     process.stderr.write(`[next] ${data}`);
+  });
+
+  nextServerProcess.on("error", (error) => {
+    pushServerLog("next:spawn-error", error?.stack || error?.message || String(error));
   });
 
   nextServerProcess.on("exit", (code, signal) => {
     if (!app.isQuitting) {
       dialog.showErrorBox(
         "Blitz Renderer",
-        `Embedded server stopped unexpectedly (code: ${code ?? "null"}, signal: ${signal ?? "none"}).`
+        [
+          `Embedded server stopped unexpectedly (code: ${code ?? "null"}, signal: ${signal ?? "none"}).`,
+          "",
+          getBundledServerDiagnostics(),
+        ].join("\n")
       );
       app.quit();
     }
   });
 
-  await waitForServer(`http://${HOST}:${port}`, SERVER_START_TIMEOUT_MS);
+  try {
+    await waitForServer(`http://${HOST}:${port}`, SERVER_START_TIMEOUT_MS);
+  } catch (error) {
+    pushServerLog("next:start-timeout", error?.stack || error?.message || String(error));
+    throw error;
+  }
 }
 
 function stopBundledNextServer() {
@@ -176,6 +223,11 @@ app
   .whenReady()
   .then(() => createMainWindow())
   .catch((error) => {
-    dialog.showErrorBox("Blitz Renderer", `Failed to start the app.\n\n${error.message}`);
+    const baseMessage = `Failed to start the app.\n\n${error.message}`;
+    if (app.isPackaged) {
+      dialog.showErrorBox("Blitz Renderer", `${baseMessage}\n\n${getBundledServerDiagnostics()}`);
+    } else {
+      dialog.showErrorBox("Blitz Renderer", baseMessage);
+    }
     app.quit();
   });
