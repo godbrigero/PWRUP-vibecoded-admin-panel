@@ -1,9 +1,6 @@
-// src/app/paths/page.tsx - Purpose: select a path from known paths and publish SelectedPath to a topic.
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Address, AutobahnClient } from "autobahn-client";
-import { useSettings } from "@/lib/settings";
+import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/layout";
 import {
   Card,
@@ -12,15 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { KNOWN_PATHS } from "@/lib/paths";
-import { SelectedPath } from "@/generated/util/other";
+import { usePathNetworkTable } from "@/lib/hooks/usePathNetworkTable";
 
 const SELECTED_PATH_STORAGE_KEY = "blitz.paths.selected";
-const PATH_TOPIC_STORAGE_KEY = "blitz.paths.topic";
-const DEFAULT_TOPIC = "path/selected";
 
 function getStoredPath(): string {
   if (typeof window === "undefined") return "";
@@ -39,174 +31,92 @@ function setStoredPath(pathName: string): void {
   }
 }
 
-function getStoredTopic(): string {
-  if (typeof window === "undefined") return DEFAULT_TOPIC;
-  try {
-    return localStorage.getItem(PATH_TOPIC_STORAGE_KEY) ?? DEFAULT_TOPIC;
-  } catch {
-    return DEFAULT_TOPIC;
-  }
-}
+function findMatchingKnownPath(pathName: string | null): string | null {
+  if (!pathName) return null;
+  const trimmed = pathName.trim();
+  if (!trimmed) return null;
 
-function setStoredTopic(topic: string): void {
-  try {
-    localStorage.setItem(PATH_TOPIC_STORAGE_KEY, topic);
-  } catch {
-    // Ignore storage errors.
-  }
+  const directMatch = KNOWN_PATHS.find((entry) => entry === trimmed);
+  if (directMatch) return directMatch;
+
+  const lowered = trimmed.toLowerCase();
+  return KNOWN_PATHS.find((entry) => entry.toLowerCase() === lowered) ?? null;
 }
 
 export default function PathsPage() {
-  const { settings } = useSettings();
-  const client = useMemo(
-    () => new AutobahnClient(new Address(settings.host, settings.port)),
-    [settings.host, settings.port],
-  );
-
-  const [selectedPathName, setSelectedPathName] = useState(getStoredPath);
-  const [topic, setTopic] = useState(getStoredTopic);
-  const [isConnected, setIsConnected] = useState(false);
-  const [lastPublish, setLastPublish] = useState<{
-    atMs: number;
-    topic: string;
-    pathName: string;
-    ok: boolean;
-    message?: string;
-  } | null>(null);
+  const { robotIp, topic, isConnected, currentPath, lastUpdatedMs } = usePathNetworkTable();
+  const [selectedPathName, setSelectedPathName] = useState<string>(() => getStoredPath() || KNOWN_PATHS[0]);
 
   useEffect(() => {
-    try {
-      client.begin();
-    } catch {
-      // Ignore begin failures.
-    }
-    const pollId = window.setInterval(() => {
-      try {
-        setIsConnected(client.isConnected());
-      } catch {
-        setIsConnected(false);
-      }
-    }, 750);
-    return () => window.clearInterval(pollId);
-  }, [client]);
+    const matchedPath = findMatchingKnownPath(currentPath);
+    if (!matchedPath) return;
+    setSelectedPathName(matchedPath);
+    setStoredPath(matchedPath);
+  }, [currentPath]);
 
-  const publishPath = useCallback(
-    (pathName: string) => {
-      const t = topic.trim();
-      if (!t) {
-        setLastPublish({
-          atMs: Date.now(),
-          topic: t,
-          pathName,
-          ok: false,
-          message: "Topic is empty.",
-        });
-        return;
-      }
-      if (!client.isConnected()) {
-        setLastPublish({
-          atMs: Date.now(),
-          topic: t,
-          pathName,
-          ok: false,
-          message: "Not connected to Autobahn.",
-        });
-        return;
-      }
-      try {
-        const bytes = SelectedPath.encode({ pathName }).finish();
-        client.publish(t, bytes);
-        setLastPublish({ atMs: Date.now(), topic: t, pathName, ok: true });
-      } catch (e) {
-        setLastPublish({
-          atMs: Date.now(),
-          topic: t,
-          pathName,
-          ok: false,
-          message: (e as Error).message,
-        });
-      }
-    },
-    [client, topic],
-  );
-
-  function handleSelect(pathName: string) {
-    setSelectedPathName(pathName);
-    setStoredPath(pathName);
-    publishPath(pathName);
-  }
-
-  function handleTopicChange(value: string) {
-    setTopic(value);
-    setStoredTopic(value);
-  }
-
-  const selectedPath: SelectedPath = { pathName: selectedPathName };
+  const robotMatchedPath = findMatchingKnownPath(currentPath);
+  const lastUpdatedText =
+    typeof lastUpdatedMs === "number" ? new Date(lastUpdatedMs).toLocaleTimeString() : "No updates yet";
 
   return (
     <AppLayout title="Path Selection">
-      <div className="max-w-xl space-y-6">
+      <div className="max-w-3xl space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Select Path</CardTitle>
+            <CardTitle>NetworkTables Path Sync</CardTitle>
             <CardDescription>
-              Choose a path from the list. Selection is published to the configured topic as SelectedPath proto.
+              Reads the robot&apos;s current path from WPILib NetworkTables (read-only from this app).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="path-topic">Publish topic</Label>
-              <Input
-                id="path-topic"
-                value={topic}
-                onChange={(e) => handleTopicChange(e.target.value)}
-                placeholder={DEFAULT_TOPIC}
-              />
-              <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                <span>{isConnected ? "Connected" : "Disconnected"}</span>
-                {lastPublish && (
-                  <span>
-                    {lastPublish.ok ? "Published" : "Publish failed"} to {lastPublish.topic}
-                    {lastPublish.message && `: ${lastPublish.message}`}
-                  </span>
-                )}
+            <div className="rounded-md border border-white/10 bg-zinc-950 px-3 py-2 text-xs">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className={isConnected ? "text-emerald-400" : "text-zinc-500"}>
+                  {isConnected ? "NT Connected" : "NT Disconnected"}
+                </span>
+                <span className="text-zinc-400">
+                  Team IP: <span className="font-mono text-zinc-200">{robotIp}</span>
+                </span>
+                <span className="text-zinc-400">
+                  Topic: <span className="font-mono text-zinc-200">{topic || "(not set)"}</span>
+                </span>
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className="text-zinc-400">
+                  Robot Current Path: <span className="font-medium text-zinc-200">{currentPath ?? "(none)"}</span>
+                </span>
+                <span className="text-zinc-500">Updated: {lastUpdatedText}</span>
               </div>
             </div>
-            <Label>Known paths</Label>
+
             <div className="space-y-2">
-              {KNOWN_PATHS.map((pathName) => (
-                <label
-                  key={pathName}
-                  className="flex cursor-pointer items-center gap-3 rounded-md border p-3 transition hover:bg-accent/50 has-[:checked]:border-primary has-[:checked]:bg-accent"
-                >
-                  <input
-                    type="radio"
-                    name="path"
-                    value={pathName}
-                    checked={selectedPathName === pathName}
-                    onChange={() => handleSelect(pathName)}
-                    className="h-4 w-4"
-                  />
-                  <span className="font-medium">{pathName}</span>
-                </label>
-              ))}
+              {KNOWN_PATHS.map((pathName) => {
+                const isSelected = selectedPathName === pathName;
+                const isRobotPath = robotMatchedPath === pathName;
+                return (
+                  <button
+                    key={pathName}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPathName(pathName);
+                      setStoredPath(pathName);
+                    }}
+                    className={
+                      isSelected
+                        ? "flex w-full items-center justify-between rounded-md border border-white/55 bg-zinc-900 px-3 py-2 text-left text-sm font-medium text-white"
+                        : "flex w-full items-center justify-between rounded-md border border-white/15 bg-black px-3 py-2 text-left text-sm font-medium text-zinc-300 transition hover:border-white/30 hover:text-zinc-100"
+                    }
+                  >
+                    <span>{pathName}</span>
+                    {isRobotPath && (
+                      <span className="rounded border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.08em] text-emerald-300">
+                        Robot Active
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-            {selectedPathName && (
-              <div className="space-y-2">
-                <Button
-                  onClick={() => publishPath(selectedPathName)}
-                  disabled={!topic.trim() || !isConnected}
-                >
-                  Send to robot
-                </Button>
-                <div className="rounded border bg-muted/50 p-3 text-sm">
-                  <div className="text-muted-foreground text-xs">SelectedPath (proto)</div>
-                  <pre className="mt-1 font-mono text-xs">
-                    {JSON.stringify(SelectedPath.toJSON(selectedPath), null, 2)}
-                  </pre>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>

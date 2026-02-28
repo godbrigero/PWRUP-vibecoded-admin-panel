@@ -9,9 +9,17 @@ import React, {
   useState,
 } from "react";
 
+export interface NetworkTablesSettings {
+  teamNumber: number;
+  port: number;
+  robotIpLastOctet: number;
+  currentPathTopic: string;
+}
+
 export interface ConnectionSettings {
   host: string;
   port: number;
+  networkTables: NetworkTablesSettings;
 }
 
 interface SettingsContextValue {
@@ -20,7 +28,16 @@ interface SettingsContextValue {
   resetDefaults: () => void;
 }
 
-const DEFAULTS: ConnectionSettings = { host: "10.47.65.7", port: 8080 };
+const DEFAULTS: ConnectionSettings = {
+  host: "10.47.65.7",
+  port: 8080,
+  networkTables: {
+    teamNumber: 4765,
+    port: 5810,
+    robotIpLastOctet: 2,
+    currentPathTopic: "/SmartDashboard/currentPath",
+  },
+};
 const STORAGE_KEY = "blitz.settings.connection";
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(
@@ -30,6 +47,54 @@ const SettingsContext = createContext<SettingsContextValue | undefined>(
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettingsState] = useState<ConnectionSettings>(DEFAULTS);
   const [hydrated, setHydrated] = useState(false);
+
+  const normalizeSettings = useCallback((parsed: Partial<ConnectionSettings>): ConnectionSettings => {
+    const nextTeamNumber =
+      typeof parsed.networkTables?.teamNumber === "number" &&
+      Number.isFinite(parsed.networkTables.teamNumber) &&
+      parsed.networkTables.teamNumber > 0
+        ? Math.round(parsed.networkTables.teamNumber)
+        : DEFAULTS.networkTables.teamNumber;
+
+    const nextNtPort =
+      typeof parsed.networkTables?.port === "number" &&
+      Number.isFinite(parsed.networkTables.port) &&
+      parsed.networkTables.port > 0 &&
+      parsed.networkTables.port <= 65535
+        ? Math.round(parsed.networkTables.port)
+        : DEFAULTS.networkTables.port;
+
+    const nextIpLastOctet =
+      typeof parsed.networkTables?.robotIpLastOctet === "number" &&
+      Number.isFinite(parsed.networkTables.robotIpLastOctet) &&
+      parsed.networkTables.robotIpLastOctet >= 1 &&
+      parsed.networkTables.robotIpLastOctet <= 254
+        ? Math.round(parsed.networkTables.robotIpLastOctet)
+        : DEFAULTS.networkTables.robotIpLastOctet;
+
+    const nextPathTopic =
+      typeof parsed.networkTables?.currentPathTopic === "string" &&
+      parsed.networkTables.currentPathTopic.trim().length > 0
+        ? parsed.networkTables.currentPathTopic.trim()
+        : DEFAULTS.networkTables.currentPathTopic;
+
+    return {
+      host:
+        typeof parsed.host === "string" && parsed.host.length > 0
+          ? parsed.host
+          : DEFAULTS.host,
+      port:
+        typeof parsed.port === "number" && Number.isFinite(parsed.port)
+          ? parsed.port
+          : DEFAULTS.port,
+      networkTables: {
+        teamNumber: nextTeamNumber,
+        port: nextNtPort,
+        robotIpLastOctet: nextIpLastOctet,
+        currentPathTopic: nextPathTopic,
+      },
+    };
+  }, []);
 
   const persistSettings = useCallback((next: ConnectionSettings) => {
     try {
@@ -48,16 +113,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         const raw = window.localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw) as Partial<ConnectionSettings>;
-          const next: ConnectionSettings = {
-            host:
-              typeof parsed.host === "string" && parsed.host.length > 0
-                ? parsed.host
-                : DEFAULTS.host,
-            port:
-              typeof parsed.port === "number" && Number.isFinite(parsed.port)
-                ? parsed.port
-                : DEFAULTS.port,
-          };
+          const next = normalizeSettings(parsed);
           setSettingsState(next);
         }
       }
@@ -66,7 +122,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setHydrated(true);
     }
-  }, []);
+  }, [normalizeSettings]);
 
   const setSettings = useCallback((next: ConnectionSettings) => {
     setSettingsState(next);
@@ -114,18 +170,26 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const next: ConnectionSettings = { host, port };
-        if (cancelled) {
-          return;
-        }
-
         setSettingsState((prev) => {
-          if (prev.host === next.host && prev.port === next.port) {
+          if (cancelled) return prev;
+          const next = normalizeSettings({
+            ...prev,
+            host,
+            port,
+          });
+          if (
+            prev.host === next.host &&
+            prev.port === next.port &&
+            prev.networkTables.teamNumber === next.networkTables.teamNumber &&
+            prev.networkTables.port === next.networkTables.port &&
+            prev.networkTables.robotIpLastOctet === next.networkTables.robotIpLastOctet &&
+            prev.networkTables.currentPathTopic === next.networkTables.currentPathTopic
+          ) {
             return prev;
           }
+          persistSettings(next);
           return next;
         });
-        persistSettings(next);
       } catch {
         // Ignore discovery failures and keep existing settings.
       }
@@ -136,7 +200,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [hydrated, persistSettings]);
+  }, [hydrated, normalizeSettings, persistSettings]);
 
   const value = useMemo<SettingsContextValue>(
     () => ({ settings, setSettings, resetDefaults }),
@@ -156,4 +220,12 @@ export function useSettings(): SettingsContextValue {
     throw new Error("useSettings must be used within a SettingsProvider");
   }
   return ctx;
+}
+
+export function frcTeamToRobotIp(teamNumber: number, lastOctet = 2): string {
+  const team = Math.max(0, Math.floor(teamNumber));
+  const octet = Math.min(254, Math.max(1, Math.floor(lastOctet)));
+  const upper = Math.floor(team / 100);
+  const lower = team % 100;
+  return `10.${upper}.${lower}.${octet}`;
 }
