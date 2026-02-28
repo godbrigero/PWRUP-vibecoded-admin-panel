@@ -10,10 +10,10 @@ import React, {
 } from "react";
 
 export interface NetworkTablesSettings {
-  teamNumber: number;
+  host: string;
   port: number;
-  robotIpLastOctet: number;
-  currentPathTopic: string;
+  sharedTable: string;
+  autonomousSelectedEntry: string;
 }
 
 export interface ConnectionSettings {
@@ -32,10 +32,10 @@ const DEFAULTS: ConnectionSettings = {
   host: "10.47.65.7",
   port: 8080,
   networkTables: {
-    teamNumber: 4765,
+    host: "10.47.65.2",
     port: 5810,
-    robotIpLastOctet: 2,
-    currentPathTopic: "/SmartDashboard/currentPath",
+    sharedTable: "PathPlanner",
+    autonomousSelectedEntry: "AutonomousSelected",
   },
 };
 const STORAGE_KEY = "blitz.settings.connection";
@@ -48,14 +48,27 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettingsState] = useState<ConnectionSettings>(DEFAULTS);
   const [hydrated, setHydrated] = useState(false);
 
-  const normalizeSettings = useCallback((parsed: Partial<ConnectionSettings>): ConnectionSettings => {
-    const nextTeamNumber =
-      typeof parsed.networkTables?.teamNumber === "number" &&
-      Number.isFinite(parsed.networkTables.teamNumber) &&
-      parsed.networkTables.teamNumber > 0
-        ? Math.round(parsed.networkTables.teamNumber)
-        : DEFAULTS.networkTables.teamNumber;
+  const normalizeTopicPart = useCallback((value: string, fallback: string): string => {
+    const cleaned = value.trim().replace(/^\/+|\/+$/g, "");
+    return cleaned.length > 0 ? cleaned : fallback;
+  }, []);
 
+  const splitTopicPath = useCallback((topicPath: string): { table: string; entry: string } => {
+    const cleaned = topicPath.trim().replace(/^\/+/, "");
+    const parts = cleaned.split("/").filter((part) => part.trim().length > 0);
+    if (parts.length >= 2) {
+      return {
+        table: parts[0]!,
+        entry: parts.slice(1).join("/"),
+      };
+    }
+    return {
+      table: DEFAULTS.networkTables.sharedTable,
+      entry: DEFAULTS.networkTables.autonomousSelectedEntry,
+    };
+  }, []);
+
+  const normalizeSettings = useCallback((parsed: Partial<ConnectionSettings>): ConnectionSettings => {
     const nextNtPort =
       typeof parsed.networkTables?.port === "number" &&
       Number.isFinite(parsed.networkTables.port) &&
@@ -64,19 +77,51 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         ? Math.round(parsed.networkTables.port)
         : DEFAULTS.networkTables.port;
 
-    const nextIpLastOctet =
-      typeof parsed.networkTables?.robotIpLastOctet === "number" &&
-      Number.isFinite(parsed.networkTables.robotIpLastOctet) &&
-      parsed.networkTables.robotIpLastOctet >= 1 &&
-      parsed.networkTables.robotIpLastOctet <= 254
-        ? Math.round(parsed.networkTables.robotIpLastOctet)
-        : DEFAULTS.networkTables.robotIpLastOctet;
+    const nextNtHost =
+      typeof parsed.networkTables?.host === "string" && parsed.networkTables.host.trim().length > 0
+        ? parsed.networkTables.host.trim()
+        : DEFAULTS.networkTables.host;
 
-    const nextPathTopic =
-      typeof parsed.networkTables?.currentPathTopic === "string" &&
-      parsed.networkTables.currentPathTopic.trim().length > 0
-        ? parsed.networkTables.currentPathTopic.trim()
-        : DEFAULTS.networkTables.currentPathTopic;
+    let nextSharedTable = normalizeTopicPart(
+      typeof parsed.networkTables?.sharedTable === "string"
+        ? parsed.networkTables.sharedTable
+        : "",
+      DEFAULTS.networkTables.sharedTable,
+    );
+    let nextSelectedEntry = normalizeTopicPart(
+      typeof parsed.networkTables?.autonomousSelectedEntry === "string"
+        ? parsed.networkTables.autonomousSelectedEntry
+        : "",
+      DEFAULTS.networkTables.autonomousSelectedEntry,
+    );
+
+    // Backward compatibility with legacy `currentPathTopic` setting.
+    const legacyTopicPath =
+      typeof (parsed.networkTables as { currentPathTopic?: unknown } | undefined)?.currentPathTopic === "string"
+        ? ((parsed.networkTables as { currentPathTopic?: string }).currentPathTopic ?? "")
+        : "";
+    if (legacyTopicPath.trim().length > 0) {
+      const parsedLegacy = splitTopicPath(legacyTopicPath);
+      nextSharedTable = normalizeTopicPart(parsedLegacy.table, DEFAULTS.networkTables.sharedTable);
+      nextSelectedEntry = normalizeTopicPart(parsedLegacy.entry, DEFAULTS.networkTables.autonomousSelectedEntry);
+    }
+
+    // Backward compatibility for previous team-number-derived NT host settings.
+    const legacyTeamNumber =
+      typeof (parsed.networkTables as { teamNumber?: unknown } | undefined)?.teamNumber === "number"
+        ? Number((parsed.networkTables as { teamNumber?: number }).teamNumber)
+        : NaN;
+    const legacyRobotIpLastOctet =
+      typeof (parsed.networkTables as { robotIpLastOctet?: unknown } | undefined)?.robotIpLastOctet === "number"
+        ? Number((parsed.networkTables as { robotIpLastOctet?: number }).robotIpLastOctet)
+        : 2;
+    const shouldUseLegacyTeamFallback =
+      (!parsed.networkTables || typeof parsed.networkTables.host !== "string" || parsed.networkTables.host.trim().length === 0) &&
+      Number.isFinite(legacyTeamNumber) &&
+      legacyTeamNumber > 0;
+    const migratedHostFromTeam = shouldUseLegacyTeamFallback
+      ? frcTeamToRobotIp(legacyTeamNumber, legacyRobotIpLastOctet)
+      : nextNtHost;
 
     return {
       host:
@@ -88,13 +133,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           ? parsed.port
           : DEFAULTS.port,
       networkTables: {
-        teamNumber: nextTeamNumber,
+        host: migratedHostFromTeam,
         port: nextNtPort,
-        robotIpLastOctet: nextIpLastOctet,
-        currentPathTopic: nextPathTopic,
+        sharedTable: nextSharedTable,
+        autonomousSelectedEntry: nextSelectedEntry,
       },
     };
-  }, []);
+  }, [normalizeTopicPart, splitTopicPath]);
 
   const persistSettings = useCallback((next: ConnectionSettings) => {
     try {
@@ -180,10 +225,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           if (
             prev.host === next.host &&
             prev.port === next.port &&
-            prev.networkTables.teamNumber === next.networkTables.teamNumber &&
+            prev.networkTables.host === next.networkTables.host &&
             prev.networkTables.port === next.networkTables.port &&
-            prev.networkTables.robotIpLastOctet === next.networkTables.robotIpLastOctet &&
-            prev.networkTables.currentPathTopic === next.networkTables.currentPathTopic
+            prev.networkTables.sharedTable === next.networkTables.sharedTable &&
+            prev.networkTables.autonomousSelectedEntry === next.networkTables.autonomousSelectedEntry
           ) {
             return prev;
           }
@@ -228,4 +273,10 @@ export function frcTeamToRobotIp(teamNumber: number, lastOctet = 2): string {
   const upper = Math.floor(team / 100);
   const lower = team % 100;
   return `10.${upper}.${lower}.${octet}`;
+}
+
+export function ntPathFromTableAndEntry(table: string, entry: string): string {
+  const normalizedTable = table.trim().replace(/^\/+|\/+$/g, "");
+  const normalizedEntry = entry.trim().replace(/^\/+|\/+$/g, "");
+  return `/${normalizedTable}/${normalizedEntry}`;
 }

@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { frcTeamToRobotIp, useSettings } from "@/lib/settings";
+import {
+  ntPathFromTableAndEntry,
+  useSettings,
+} from "@/lib/settings";
 import {
   Card,
   CardHeader,
@@ -18,50 +21,46 @@ function SettingsContent() {
   const { settings, setSettings, resetDefaults } = useSettings();
   const [host, setHost] = useState(settings.host);
   const [port, setPort] = useState<number>(settings.port);
-  const [teamNumber, setTeamNumber] = useState<number>(settings.networkTables.teamNumber);
+  const [ntHost, setNtHost] = useState<string>(settings.networkTables.host);
   const [ntPort, setNtPort] = useState<number>(settings.networkTables.port);
-  const [robotIpLastOctet, setRobotIpLastOctet] = useState<number>(settings.networkTables.robotIpLastOctet);
-  const [currentPathTopic, setCurrentPathTopic] = useState<string>(settings.networkTables.currentPathTopic);
+  const [sharedTable, setSharedTable] = useState<string>(settings.networkTables.sharedTable);
+  const [autonomousSelectedEntry, setAutonomousSelectedEntry] = useState<string>(settings.networkTables.autonomousSelectedEntry);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     setHost(settings.host);
     setPort(settings.port);
-    setTeamNumber(settings.networkTables.teamNumber);
+    setNtHost(settings.networkTables.host);
     setNtPort(settings.networkTables.port);
-    setRobotIpLastOctet(settings.networkTables.robotIpLastOctet);
-    setCurrentPathTopic(settings.networkTables.currentPathTopic);
+    setSharedTable(settings.networkTables.sharedTable);
+    setAutonomousSelectedEntry(settings.networkTables.autonomousSelectedEntry);
   }, [
     settings.host,
-    settings.networkTables.currentPathTopic,
+    settings.networkTables.autonomousSelectedEntry,
+    settings.networkTables.host,
     settings.networkTables.port,
-    settings.networkTables.robotIpLastOctet,
-    settings.networkTables.teamNumber,
+    settings.networkTables.sharedTable,
     settings.port,
   ]);
 
   function onSave() {
     const nextPort = Number(port);
-    const nextTeamNumber = Number(teamNumber);
+    const nextNtHost = ntHost.trim();
     const nextNtPort = Number(ntPort);
-    const nextIpLastOctet = Number(robotIpLastOctet);
-    const nextPathTopic = currentPathTopic.trim();
+    const nextSharedTable = sharedTable.trim();
+    const nextAutonomousSelectedEntry = autonomousSelectedEntry.trim();
 
     if (
       !host.trim() ||
       !Number.isFinite(nextPort) ||
       nextPort <= 0 ||
       nextPort > 65535 ||
-      !Number.isFinite(nextTeamNumber) ||
-      nextTeamNumber <= 0 ||
-      nextTeamNumber > 99999 ||
+      !nextNtHost ||
       !Number.isFinite(nextNtPort) ||
       nextNtPort <= 0 ||
       nextNtPort > 65535 ||
-      !Number.isFinite(nextIpLastOctet) ||
-      nextIpLastOctet < 1 ||
-      nextIpLastOctet > 254 ||
-      !nextPathTopic
+      !nextSharedTable ||
+      !nextAutonomousSelectedEntry
     ) {
       setSaved(false);
       return;
@@ -70,10 +69,10 @@ function SettingsContent() {
       host: host.trim(),
       port: nextPort,
       networkTables: {
-        teamNumber: Math.round(nextTeamNumber),
+        host: nextNtHost,
         port: Math.round(nextNtPort),
-        robotIpLastOctet: Math.round(nextIpLastOctet),
-        currentPathTopic: nextPathTopic,
+        sharedTable: nextSharedTable,
+        autonomousSelectedEntry: nextAutonomousSelectedEntry,
       },
     });
     setSaved(true);
@@ -135,36 +134,18 @@ function SettingsContent() {
         <CardHeader>
           <CardTitle>NetworkTables (Paths)</CardTitle>
           <CardDescription>
-            Path sync uses WPILib NT4 and connects to a team-derived robot IP.
+            Path sync uses WPILib NT4 and connects to your configured robot host/IP.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="frc-team-number">FRC Team Number</Label>
+            <Label htmlFor="nt-host">Robot NT Host / IP</Label>
             <Input
-              id="frc-team-number"
+              id="nt-host"
               type="text"
-              inputMode="numeric"
-              placeholder="4765"
-              value={String(teamNumber)}
-              onChange={(e) => {
-                const v = e.target.value.replace(/\D+/g, "");
-                setTeamNumber(v === "" ? 0 : Number(v));
-              }}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="frc-ip-last-octet">Robot IP Last Octet</Label>
-            <Input
-              id="frc-ip-last-octet"
-              type="text"
-              inputMode="numeric"
-              placeholder="2"
-              value={String(robotIpLastOctet)}
-              onChange={(e) => {
-                const v = e.target.value.replace(/\D+/g, "");
-                setRobotIpLastOctet(v === "" ? 0 : Number(v));
-              }}
+              placeholder="10.47.65.2 or roborio-4765-frc.local"
+              value={ntHost}
+              onChange={(e) => setNtHost(e.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -182,19 +163,34 @@ function SettingsContent() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="nt-path-topic">Current Path Topic</Label>
+            <Label htmlFor="nt-shared-table">Shared Table</Label>
             <Input
-              id="nt-path-topic"
+              id="nt-shared-table"
               type="text"
-              placeholder="/SmartDashboard/currentPath"
-              value={currentPathTopic}
-              onChange={(e) => setCurrentPathTopic(e.target.value)}
+              placeholder="PathPlanner"
+              value={sharedTable}
+              onChange={(e) => setSharedTable(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="nt-selected-entry">Autonomous Selected Entry</Label>
+            <Input
+              id="nt-selected-entry"
+              type="text"
+              placeholder="AutonomousSelected"
+              value={autonomousSelectedEntry}
+              onChange={(e) => setAutonomousSelectedEntry(e.target.value)}
             />
           </div>
           <div className="rounded-md border border-white/10 bg-zinc-950 px-3 py-2 text-xs text-zinc-300">
-            Robot IP from team number:{" "}
+            NetworkTables target host:{" "}
             <span className="font-mono text-zinc-100">
-              {frcTeamToRobotIp(teamNumber, robotIpLastOctet)}
+              {ntHost || "(not set)"}
+            </span>
+            <br />
+            Full NT topic for selected auto:{" "}
+            <span className="font-mono text-zinc-100">
+              {ntPathFromTableAndEntry(sharedTable, autonomousSelectedEntry)}
             </span>
           </div>
         </CardContent>

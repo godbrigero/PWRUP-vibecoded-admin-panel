@@ -431,14 +431,30 @@ function CompetitionVideoViewer() {
 }
 
 function CompetitionPathsSelector() {
-  const { robotIp, topic, isConnected, currentPath, lastUpdatedMs } = usePathNetworkTable();
+  const {
+    robotIp,
+    topic,
+    isConnected,
+    selectedAutoFromRobot,
+    lastUpdatedMs,
+    publishSelectedAuto,
+    lastPublishMs,
+    publishError,
+  } = usePathNetworkTable();
   const [selectedPathName, setSelectedPathName] = useState<string>(() => getStoredPath() || KNOWN_PATHS[0]);
   const [imageCandidateIndex, setImageCandidateIndex] = useState(0);
+  const [pendingPublish, setPendingPublish] = useState<string | null>(null);
 
-  function handleSelectPath(pathName: string) {
+  const handleSelectPath = useCallback(async (pathName: string) => {
     setSelectedPathName(pathName);
     setStoredPath(pathName);
-  }
+    setPendingPublish(pathName);
+    try {
+      await publishSelectedAuto(pathName);
+    } finally {
+      setPendingPublish(null);
+    }
+  }, [publishSelectedAuto]);
 
   const imageCandidates = useMemo(() => {
     const encodedName = encodeURIComponent(selectedPathName);
@@ -454,16 +470,18 @@ function CompetitionPathsSelector() {
   }, [selectedPathName]);
 
   useEffect(() => {
-    const matchedPath = findMatchingKnownPath(currentPath);
+    const matchedPath = findMatchingKnownPath(selectedAutoFromRobot);
     if (!matchedPath) return;
     setSelectedPathName(matchedPath);
     setStoredPath(matchedPath);
-  }, [currentPath]);
+  }, [selectedAutoFromRobot]);
 
   const previewImageSrc = imageCandidates[imageCandidateIndex] ?? null;
-  const robotMatchedPath = findMatchingKnownPath(currentPath);
+  const robotMatchedPath = findMatchingKnownPath(selectedAutoFromRobot);
   const lastUpdatedText =
     typeof lastUpdatedMs === "number" ? new Date(lastUpdatedMs).toLocaleTimeString() : "No updates yet";
+  const lastPublishText =
+    typeof lastPublishMs === "number" ? new Date(lastPublishMs).toLocaleTimeString() : "No publish yet";
 
   return (
     <section className="flex h-full min-h-0 flex-col gap-3">
@@ -475,7 +493,7 @@ function CompetitionPathsSelector() {
                 {isConnected ? "NT Connected" : "NT Disconnected"}
               </span>
               <span className="text-zinc-400">
-                Team IP: <span className="font-mono text-zinc-200">{robotIp}</span>
+                NT Host: <span className="font-mono text-zinc-200">{robotIp || "(not set)"}</span>
               </span>
               <span className="text-zinc-400">
                 Topic: <span className="font-mono text-zinc-200">{topic || "(not set)"}</span>
@@ -483,12 +501,14 @@ function CompetitionPathsSelector() {
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
               <span className="text-zinc-400">
-                Robot Current Path: <span className="font-medium text-zinc-200">{currentPath ?? "(none)"}</span>
+                Robot Selected Auto: <span className="font-medium text-zinc-200">{selectedAutoFromRobot ?? "NONE"}</span>
               </span>
               {robotMatchedPath && (
                 <span className="text-zinc-500">Matched and selected for preview.</span>
               )}
               <span className="text-zinc-500">Updated: {lastUpdatedText}</span>
+              <span className="text-zinc-500">Last publish: {lastPublishText}</span>
+              {publishError && <span className="text-rose-300">Publish error: {publishError}</span>}
             </div>
           </div>
 
@@ -506,6 +526,7 @@ function CompetitionPathsSelector() {
                       key={pathName}
                       type="button"
                       onClick={() => handleSelectPath(pathName)}
+                      disabled={pendingPublish === pathName}
                       className={
                         isSelected
                           ? "flex h-11 items-center rounded-md border border-white/55 bg-zinc-900 px-3 text-left text-sm font-medium text-white"
@@ -519,7 +540,7 @@ function CompetitionPathsSelector() {
                             : "mr-2 h-2 w-2 rounded-full bg-transparent"
                         }
                       />
-                      {pathName}
+                      {pendingPublish === pathName ? `Publishing ${pathName}...` : pathName}
                     </button>
                   );
                 })}

@@ -44,19 +44,31 @@ function findMatchingKnownPath(pathName: string | null): string | null {
 }
 
 export default function PathsPage() {
-  const { robotIp, topic, isConnected, currentPath, lastUpdatedMs } = usePathNetworkTable();
+  const {
+    robotIp,
+    topic,
+    isConnected,
+    selectedAutoFromRobot,
+    lastUpdatedMs,
+    publishSelectedAuto,
+    lastPublishMs,
+    publishError,
+  } = usePathNetworkTable();
   const [selectedPathName, setSelectedPathName] = useState<string>(() => getStoredPath() || KNOWN_PATHS[0]);
+  const [pendingPublish, setPendingPublish] = useState<string | null>(null);
 
   useEffect(() => {
-    const matchedPath = findMatchingKnownPath(currentPath);
+    const matchedPath = findMatchingKnownPath(selectedAutoFromRobot);
     if (!matchedPath) return;
     setSelectedPathName(matchedPath);
     setStoredPath(matchedPath);
-  }, [currentPath]);
+  }, [selectedAutoFromRobot]);
 
-  const robotMatchedPath = findMatchingKnownPath(currentPath);
+  const robotMatchedPath = findMatchingKnownPath(selectedAutoFromRobot);
   const lastUpdatedText =
     typeof lastUpdatedMs === "number" ? new Date(lastUpdatedMs).toLocaleTimeString() : "No updates yet";
+  const lastPublishText =
+    typeof lastPublishMs === "number" ? new Date(lastPublishMs).toLocaleTimeString() : "No publish yet";
 
   return (
     <AppLayout title="Path Selection">
@@ -75,7 +87,7 @@ export default function PathsPage() {
                   {isConnected ? "NT Connected" : "NT Disconnected"}
                 </span>
                 <span className="text-zinc-400">
-                  Team IP: <span className="font-mono text-zinc-200">{robotIp}</span>
+                  NT Host: <span className="font-mono text-zinc-200">{robotIp || "(not set)"}</span>
                 </span>
                 <span className="text-zinc-400">
                   Topic: <span className="font-mono text-zinc-200">{topic || "(not set)"}</span>
@@ -83,9 +95,11 @@ export default function PathsPage() {
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                 <span className="text-zinc-400">
-                  Robot Current Path: <span className="font-medium text-zinc-200">{currentPath ?? "(none)"}</span>
+                  Robot Selected Auto: <span className="font-medium text-zinc-200">{selectedAutoFromRobot ?? "NONE"}</span>
                 </span>
                 <span className="text-zinc-500">Updated: {lastUpdatedText}</span>
+                <span className="text-zinc-500">Last publish: {lastPublishText}</span>
+                {publishError && <span className="text-rose-300">Publish error: {publishError}</span>}
               </div>
             </div>
 
@@ -97,17 +111,24 @@ export default function PathsPage() {
                   <button
                     key={pathName}
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       setSelectedPathName(pathName);
                       setStoredPath(pathName);
+                      setPendingPublish(pathName);
+                      try {
+                        await publishSelectedAuto(pathName);
+                      } finally {
+                        setPendingPublish(null);
+                      }
                     }}
+                    disabled={pendingPublish === pathName}
                     className={
                       isSelected
                         ? "flex w-full items-center justify-between rounded-md border border-white/55 bg-zinc-900 px-3 py-2 text-left text-sm font-medium text-white"
                         : "flex w-full items-center justify-between rounded-md border border-white/15 bg-black px-3 py-2 text-left text-sm font-medium text-zinc-300 transition hover:border-white/30 hover:text-zinc-100"
                     }
                   >
-                    <span>{pathName}</span>
+                    <span>{pendingPublish === pathName ? `Publishing ${pathName}...` : pathName}</span>
                     {isRobotPath && (
                       <span className="rounded border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.08em] text-emerald-300">
                         Robot Active
